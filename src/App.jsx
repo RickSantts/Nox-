@@ -69,18 +69,18 @@ const getCurrentMonthStr = () => new Date().toISOString().substring(0, 7);
 // --- ESTILIZAÇÃO NEUMORPHISM/MODERNA (V2) ---
 const globalStyle = `
   :root {
-    --bg-page-dark: #0A0D14;
-    --bg-surface-dark: #121826;
-    --bg-surface-hover: #1A2133;
-    --border-dark: #1E273B;
+    --bg-page-dark: #0D1F1A;
+    --bg-surface-dark: #152E27;
+    --bg-surface-hover: #1E3D35;
+    --border-dark: #2A4D43;
     --text-main-dark: #FFFFFF;
-    --text-muted-dark: #8E9BAE;
+    --text-muted-dark: #8AA89E;
     
-    --color-primary: #5944FF; 
-    --color-secondary: #00F0FF;
-    --color-income: #12C99B;
-    --color-expense: #FF4A6B; 
-    --color-warning: #FFB142;
+    --color-primary: #3DCEA8; 
+    --color-secondary: #7FFFd4;
+    --color-income: #7FFFd4;
+    --color-expense: #FF6B6B; 
+    --color-warning: #FFD93D;
   }
 
   body, html {
@@ -112,9 +112,9 @@ const globalStyle = `
   .total-balance-box {
     flex: 0 0 100%; scroll-snap-align: center;
     padding: 24px;
-    background: linear-gradient(135deg, var(--color-primary) 0%, #8978FF 100%);
+    background: linear-gradient(135deg, #3DCEA8 0%, #7FFFd4 100%);
     border-radius: 28px; color: white;
-    box-shadow: 0 10px 30px rgba(89, 68, 255, 0.3);position: relative; overflow: hidden;
+    box-shadow: 0 10px 30px rgba(61, 206, 168, 0.3);position: relative; overflow: hidden;
   }
   .total-balance-box::after { content:''; position:absolute; top:-20px; right:-20px; width:100px; height:100px; background:rgba(255,255,255,0.1); border-radius:50%; }
   
@@ -170,7 +170,7 @@ const globalStyle = `
   .bottom-nav { width: 100%; max-width: 480px; margin: 0 auto; background: rgba(18, 24, 38, 0.85); backdrop-filter: blur(20px); border-top: 1px solid var(--border-dark); padding: 12px 24px calc(12px + env(safe-area-inset-bottom)); display: flex; justify-content: space-between; align-items: center; pointer-events: auto; }
   .nav-item { background: none; border: none; color: var(--text-muted-dark); display: flex; flex-direction: column; align-items: center; font-size: 0.7rem; gap: 4px; font-weight: 500; cursor: pointer; transition: 0.2s; }
   .nav-item.active { color: var(--color-primary); }
-  .fab-glass { width: 64px; height: 64px; border-radius: 32px; background: var(--color-primary); color: white; border: none; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(89, 68, 255, 0.4); transform: translateY(-20px); cursor: pointer; transition: 0.2s; }
+  .fab-glass { width: 64px; height: 64px; border-radius: 32px; background: var(--color-primary); color: white; border: none; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(61, 206, 168, 0.4); transform: translateY(-20px); cursor: pointer; transition: 0.2s; }
   
   /* Overlays */
   .bottom-sheet-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 100; display: flex; justify-content: center; align-items: flex-end; }
@@ -182,6 +182,14 @@ const globalStyle = `
   /* Toasts */
   .toast-wrapper { position: fixed; top: 40px; left: 0; right: 0; display: flex; justify-content: center; z-index: 1001; animation: slideUpFade 0.3s ease; }
   .toast-box { background: var(--color-expense); color: white; padding: 14px 24px; border-radius: 100px; font-weight: 500; font-size: 0.9rem; display: flex; align-items: center; gap: 10px; box-shadow: 0 10px 20px rgba(255, 74, 107, 0.4); }
+
+  /* Name Modal */
+  .name-modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 200; display: flex; justify-content: center; align-items: center; }
+  .name-modal { background: var(--bg-surface-dark); padding: 32px; border-radius: 24px; width: 90%; max-width: 360px; text-align: center; animation: popIn 0.4s ease; }
+  .name-modal h2 { font-size: 1.4rem; margin-bottom: 8px; color: var(--text-main-dark); }
+  .name-modal p { font-size: 0.9rem; color: var(--text-muted-dark); margin-bottom: 24px; }
+  .name-modal input { width: 100%; background: var(--bg-page-dark); border: 1px solid var(--border-dark); padding: 14px 16px; border-radius: 14px; color: var(--text-main-dark); font-size: 1rem; margin-bottom: 16px; text-align: center; }
+  .name-modal button { width: 100%; background: var(--color-primary); color: white; padding: 14px; border: none; border-radius: 14px; font-weight: 600; font-size: 1rem; cursor: pointer; }
 `;
 
 // --- COMPONENTES VISUAIS ---
@@ -410,6 +418,8 @@ export default function App() {
   const [accounts, setAccounts] = useState(DEFAULT_ACCOUNTS);
   const [budgets, setBudgets] = useState({});
   const [hideValues, setHideValues] = useState(false);
+  const [userName, setUserName] = useState('');
+  const [showNameModal, setShowNameModal] = useState(false);
   
   const safeFormat = (val) => hideValues ? 'R$ •••••' : formatCurrency(val);
 
@@ -418,15 +428,19 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editTx, setEditTx] = useState(null);
+  const [selectedAccountFilter, setSelectedAccountFilter] = useState(null);
 
   useEffect(() => {
     const rawTx = localStorage.getItem('financeTransactionsV2');
     const rawAcc = localStorage.getItem('financeAccountsV2');
     const rawBud = localStorage.getItem('financeBudgetsV2');
+    const rawName = localStorage.getItem('financeUserName');
     
     if (rawTx) setTransactions(JSON.parse(rawTx));
     if (rawAcc) setAccounts(JSON.parse(rawAcc));
     if (rawBud) setBudgets(JSON.parse(rawBud));
+    if (rawName) setUserName(rawName);
+    else setShowNameModal(true);
     setIsLoaded(true);
   }, []);
 
@@ -434,11 +448,18 @@ export default function App() {
     if(!isLoaded) return [];
     if(transactions.length === 0) return [getCurrentMonthStr()];
     const setM = new Set(transactions.map(t => t.date.substring(0, 7)));
+    const current = getCurrentMonthStr();
+    setM.add(current);
     return Array.from(setM).sort().reverse();
   }, [transactions, isLoaded]);
 
   useEffect(() => {
-    if (availableMonths.length > 0 && !availableMonths.includes(selectedMonth)) setSelectedMonth(availableMonths[0]);
+    const currentMonth = getCurrentMonthStr();
+    if (availableMonths.length > 0 && availableMonths.includes(currentMonth)) {
+      setSelectedMonth(currentMonth);
+    } else if (availableMonths.length > 0 && !availableMonths.includes(selectedMonth)) {
+      setSelectedMonth(availableMonths[0]);
+    }
   }, [availableMonths, selectedMonth]);
 
   // Derived Data
@@ -539,13 +560,13 @@ export default function App() {
         <div className="header-area">
           <div style={{display:'flex', gap:'16px', alignItems:'center'}}>
              <div>
-               <h1 className="greeting">
-                 Olá! 
-                 <span style={{cursor:'pointer', color:'var(--text-muted-dark)'}} onClick={()=>setHideValues(!hideValues)}>
-                   <SvgIcon name={hideValues ? 'eye_off' : 'eye'} size={20} />
-                 </span>
-               </h1>
-               <p className="subtitle">Nox Finance</p>
+<h1 className="greeting">
+                  Olá{userName ? ', ' + userName : '!'} 
+                  <span style={{cursor:'pointer', color:'var(--text-muted-dark)'}} onClick={()=>setHideValues(!hideValues)}>
+                    <SvgIcon name={hideValues ? 'eye_off' : 'eye'} size={20} />
+                  </span>
+                </h1>
+                <p className="subtitle">Gestor de Finanças</p>
              </div>
           </div>
           <div style={{display:'flex', gap:'12px', alignItems:'center'}}>
@@ -656,13 +677,42 @@ export default function App() {
                        <div style={{width:'44px', height:'44px', borderRadius:'14px', background:`${acc.color}20`, color:acc.color, display:'flex', justifyContent:'center', alignItems:'center'}}><SvgIcon name="wallet" size={20} /></div>
                        <div style={{fontSize:'0.95rem', fontWeight:600, color:'var(--text-main-dark)'}}>{acc.name}</div>
                     </div>
-                    <div style={{fontSize:'1.1rem', fontWeight:700, color: (accountBalances[acc.id]||0) < 0 ? 'var(--color-expense)' : 'var(--text-main-dark)'}}>
-                       {safeFormat(accountBalances[acc.id] || 0)}
+                    <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+                      <button 
+                        style={{
+                          padding:'8px 12px', fontSize:'0.7rem', borderRadius:'10px', border:'none', 
+                          background: selectedAccountFilter === acc.id ? 'var(--color-expense)' : 'var(--bg-surface-dark)',
+                          color: selectedAccountFilter === acc.id ? 'white' : 'var(--text-muted-dark)',
+                          cursor:'pointer', fontWeight:500
+                        }}
+                        onClick={() => setSelectedAccountFilter(selectedAccountFilter === acc.id ? null : acc.id)}
+                      >
+                        {selectedAccountFilter === acc.id ? 'Todas' : 'Ver Despesas'}
+                      </button>
+                      <div style={{fontSize:'1.1rem', fontWeight:700, color: (accountBalances[acc.id]||0) < 0 ? 'var(--color-expense)' : 'var(--text-main-dark)'}}>
+                         {safeFormat(accountBalances[acc.id] || 0)}
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
+            {selectedAccountFilter && (
+              <div className="glass-card" style={{marginTop:'16px'}}>
+                <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'16px'}}>
+                  <h3 className="section-title" style={{margin:0}}>Despesas de {accounts.find(a => a.id === selectedAccountFilter)?.name}</h3>
+                  <span style={{fontSize:'0.7rem', color:'var(--color-expense)', cursor:'pointer'}} onClick={() => setSelectedAccountFilter(null)}>Fechar</span>
+                </div>
+                {monthData.filter(t => t.accountId === selectedAccountFilter && t.type === 'saida').map(tx => (
+                  <ItemTx key={tx.id} tx={tx} onDelete={handleDelete} onEdit={openEdit} safeFormat={safeFormat} />
+                ))}
+                {monthData.filter(t => t.accountId === selectedAccountFilter && t.type === 'saida').length === 0 && (
+                  <div style={{textAlign:'center', padding:'20px', color:'var(--text-muted-dark)', fontSize:'0.85rem'}}>
+                    Nenhuma despesa encontrada para esta conta.
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -736,6 +786,36 @@ export default function App() {
 
         {/* BOTTOM SHEET ROOT */}
         {sheetOpen && <BottomSheet initialData={editTx} accounts={accounts} onClose={()=>setSheetOpen(false)} onSave={handleSaveTx} />}
+
+        {/* NAME MODAL */}
+        {showNameModal && (
+          <div className="name-modal-overlay">
+            <div className="name-modal">
+              <h2>Bem-vindo!</h2>
+              <p>Qual é o seu nome?</p>
+              <input 
+                type="text" 
+                placeholder="Seu nome" 
+                autoFocus
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && e.target.value.trim()) {
+                    setUserName(e.target.value.trim());
+                    localStorage.setItem('financeUserName', e.target.value.trim());
+                    setShowNameModal(false);
+                  }
+                }}
+              />
+              <button onClick={e => {
+                const input = e.target.previousSibling;
+                if (input.value.trim()) {
+                  setUserName(input.value.trim());
+                  localStorage.setItem('financeUserName', input.value.trim());
+                  setShowNameModal(false);
+                }
+              }}>Continuar</button>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
