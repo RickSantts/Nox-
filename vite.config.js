@@ -10,8 +10,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
       manifest: {
-        name: 'Gestor Premium',
-        short_name: 'Gestor',
+        name: 'Nox Finance',
+        short_name: 'Nox',
         description: 'Seu Gestor Financeiro Offline',
         theme_color: '#0A0D14',
         background_color: '#0A0D14',

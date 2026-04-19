@@ -545,7 +545,7 @@ export default function App() {
                    <SvgIcon name={hideValues ? 'eye_off' : 'eye'} size={20} />
                  </span>
                </h1>
-               <p className="subtitle">Gestor Premium V2</p>
+               <p className="subtitle">Nox Finance</p>
              </div>
           </div>
           <div style={{display:'flex', gap:'12px', alignItems:'center'}}>
