@@ -103,7 +103,8 @@ const globalStyle = `
   ::-webkit-scrollbar { display: none; }
 
   /* Header */
-  .header-area { padding: 30px 24px 10px; display: flex; justify-content: space-between; align-items: flex-start; }
+  .header-area { padding: 20px 16px 10px; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  @media (max-width: 380px) { .header-area { padding: 16px 12px 8px; } }
   .greeting { font-size: 1.25rem; font-weight: 600; color: var(--text-main-dark); display: flex; alignItems: center; gap: 8px;}
   .subtitle { font-size: 0.85rem; color: var(--text-muted-dark); margin-top: -4px;}
   
@@ -119,18 +120,20 @@ const globalStyle = `
   .total-balance-box::after { content:''; position:absolute; top:-20px; right:-20px; width:100px; height:100px; background:rgba(255,255,255,0.1); border-radius:50%; }
   
   /* Month Picker */
-  .month-picker-container { padding: 0 24px; margin-bottom: 20px; display: flex; justify-content: flex-end; }
+  .month-picker-container { padding: 0; margin: 0; display: flex; justify-content: flex-end; }
   .month-select {
     appearance: none; background: var(--bg-surface-dark); color: var(--text-main-dark);
-    border: 1px solid var(--border-dark); padding: 10px 36px 10px 16px; border-radius: 20px;
-    font-weight: 500; font-size: 0.85rem; cursor: pointer;
+    border: 1px solid var(--border-dark); padding: 8px 32px 8px 12px; border-radius: 16px;
+    font-weight: 500; font-size: 0.8rem; cursor: pointer;
     background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="white" viewBox="0 0 24 24"><path stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></svg>');
-    background-repeat: no-repeat; background-position: right 12px center;
+    background-repeat: no-repeat; background-position: right 10px center;
   }
 
   /* Content Cards */
-  .content-pad { padding: 0 24px; display: flex; flex-direction: column; gap: 16px; animation: popIn 0.4s ease; }
-  .card-row { display: flex; gap: 16px; }
+  .content-pad { padding: 0 16px; display: flex; flex-direction: column; gap: 16px; animation: popIn 0.4s ease; }
+  @media (max-width: 380px) { .content-pad { padding: 0 12px; gap: 12px; } }
+  .card-row { display: flex; gap: 12px; }
+  @media (max-width: 380px) { .card-row { gap: 8px; } }
   .card-half { flex: 1; background: var(--bg-surface-dark); padding: 16px 20px; border-radius: 24px; display: flex; flex-direction: column; justify-content: center; }
   .card-half .icon-circ { width: 36px; height: 36px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; }
   .card-half.inc .icon-circ { background: rgba(18, 201, 155, 0.15); color: var(--color-income); }
@@ -167,17 +170,21 @@ const globalStyle = `
 
   /* Forms & Nav */
   .bottom-nav-container { position: fixed; bottom: 0; left: 0; right: 0; display: flex; justify-content: center; pointer-events: none; z-index: 50; }
-  .bottom-nav { width: 100%; max-width: 480px; margin: 0 auto; background: rgba(18, 24, 38, 0.85); backdrop-filter: blur(20px); border-top: 1px solid var(--border-dark); padding: 12px 24px calc(12px + env(safe-area-inset-bottom)); display: flex; justify-content: space-between; align-items: center; pointer-events: auto; }
-  .nav-item { background: none; border: none; color: var(--text-muted-dark); display: flex; flex-direction: column; align-items: center; font-size: 0.7rem; gap: 4px; font-weight: 500; cursor: pointer; transition: 0.2s; }
+  .bottom-nav { width: 100%; max-width: 480px; margin: 0 auto; background: rgba(21, 46, 39, 0.9); backdrop-filter: blur(20px); border-top: 1px solid var(--border-dark); padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); display: flex; justify-content: space-between; align-items: center; pointer-events: auto; }
+  @media (max-width: 380px) { .bottom-nav { padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); } }
+  .nav-item { background: none; border: none; color: var(--text-muted-dark); display: flex; flex-direction: column; align-items: center; font-size: 0.65rem; gap: 2px; font-weight: 500; cursor: pointer; transition: 0.2s; }
   .nav-item.active { color: var(--color-primary); }
-  .fab-glass { width: 64px; height: 64px; border-radius: 32px; background: var(--color-primary); color: white; border: none; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(61, 206, 168, 0.4); transform: translateY(-20px); cursor: pointer; transition: 0.2s; }
+  .fab-glass { width: 56px; height: 56px; border-radius: 28px; background: var(--color-primary); color: white; border: none; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 20px rgba(61, 206, 168, 0.4); transform: translateY(-18px); cursor: pointer; transition: 0.2s; }
+  @media (max-width: 380px) { .fab-glass { width: 50px; height: 50px; transform: translateY(-16px); } }
   
   /* Overlays */
   .bottom-sheet-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 100; display: flex; justify-content: center; align-items: flex-end; }
-  .bottom-sheet { background: var(--bg-page-dark); width: 100%; max-width: 480px; border-top-left-radius: 32px; border-top-right-radius: 32px; padding: 24px 24px calc(24px + env(safe-area-inset-bottom)); animation: slideUpFade 0.35s cubic-bezier(0.1, 0.9, 0.2, 1); max-height: 90vh; overflow-y: auto;}
+  .bottom-sheet { background: var(--bg-page-dark); width: 100%; max-width: 480px; border-top-left-radius: 28px; border-top-right-radius: 28px; padding: 20px 16px calc(20px + env(safe-area-inset-bottom)); animation: slideUpFade 0.35s cubic-bezier(0.1, 0.9, 0.2, 1); max-height: 90vh; overflow-y: auto; }
+  @media (max-width: 380px) { .bottom-sheet { padding: 16px 12px calc(16px + env(safe-area-inset-bottom)); border-top-left-radius: 24px; border-top-right-radius: 24px; } }
   .sheet-handle { width: 40px; height: 5px; background: var(--border-dark); border-radius: 5px; margin: 0 auto 20px; }
-  .modern-input, .modern-select { width: 100%; background: var(--bg-surface-dark); border: 1px solid var(--border-dark); padding: 16px 20px; border-radius: 16px; color: var(--text-main-dark); font-size: 0.95rem; margin-bottom: 16px; }
-  .btn-submit { width: 100%; background: var(--color-primary); color: white; padding: 16px; border: none; border-radius: 16px; font-weight: 600; font-size: 1.05rem; cursor: pointer; margin-top: 10px; box-shadow: 0 8px 20px rgba(89, 68, 255, 0.3); }
+  .modern-input, .modern-select { width: 100%; background: var(--bg-surface-dark); border: 1px solid var(--border-dark); padding: 14px 16px; border-radius: 14px; color: var(--text-main-dark); font-size: 0.95rem; margin-bottom: 14px; }
+  .btn-submit { width: 100%; background: var(--color-primary); color: white; padding: 14px; border: none; border-radius: 14px; font-weight: 600; font-size: 1rem; cursor: pointer; margin-top: 10px; box-shadow: 0 6px 16px rgba(61, 206, 168, 0.3); }
+  @media (max-width: 380px) { .modern-input, .modern-select { padding: 12px 14px; font-size: 0.9rem; } .btn-submit { padding: 12px; font-size: 0.95rem; } }
 
   /* Toasts */
   .toast-wrapper { position: fixed; top: 40px; left: 0; right: 0; display: flex; justify-content: center; z-index: 1001; animation: slideUpFade 0.3s ease; }
@@ -467,8 +474,9 @@ export default function App() {
     if (!selectedMonth) return [];
     let d = transactions.filter(t => t.date.startsWith(selectedMonth));
     if (searchQuery) d = d.filter(t => t.description.toLowerCase().includes(searchQuery.toLowerCase()));
+    if (selectedAccountFilter) d = d.filter(t => t.accountId === selectedAccountFilter);
     return d.map(t => ({...t, accountName: accounts.find(a=>a.id === t.accountId)?.name || 'Carteira'}));
-  }, [transactions, selectedMonth, searchQuery, accounts]);
+  }, [transactions, selectedMonth, searchQuery, accounts, selectedAccountFilter]);
 
   const { totalBal, monthInc, monthExp } = useMemo(() => {
     let tBal = 0, mInc = 0, mExp = 0;
@@ -681,13 +689,13 @@ export default function App() {
                       <button 
                         style={{
                           padding:'8px 12px', fontSize:'0.7rem', borderRadius:'10px', border:'none', 
-                          background: selectedAccountFilter === acc.id ? 'var(--color-expense)' : 'var(--bg-surface-dark)',
+                          background: selectedAccountFilter === acc.id ? 'var(--color-primary)' : 'var(--bg-surface-dark)',
                           color: selectedAccountFilter === acc.id ? 'white' : 'var(--text-muted-dark)',
                           cursor:'pointer', fontWeight:500
                         }}
                         onClick={() => setSelectedAccountFilter(selectedAccountFilter === acc.id ? null : acc.id)}
                       >
-                        {selectedAccountFilter === acc.id ? 'Todas' : 'Ver Despesas'}
+                        {selectedAccountFilter === acc.id ? 'Fechar' : 'Ver Movs'}
                       </button>
                       <div style={{fontSize:'1.1rem', fontWeight:700, color: (accountBalances[acc.id]||0) < 0 ? 'var(--color-expense)' : 'var(--text-main-dark)'}}>
                          {safeFormat(accountBalances[acc.id] || 0)}
@@ -700,15 +708,15 @@ export default function App() {
             {selectedAccountFilter && (
               <div className="glass-card" style={{marginTop:'16px'}}>
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'16px'}}>
-                  <h3 className="section-title" style={{margin:0}}>Despesas de {accounts.find(a => a.id === selectedAccountFilter)?.name}</h3>
-                  <span style={{fontSize:'0.7rem', color:'var(--color-expense)', cursor:'pointer'}} onClick={() => setSelectedAccountFilter(null)}>Fechar</span>
+                  <h3 className="section-title" style={{margin:0}}>Movimentos de {accounts.find(a => a.id === selectedAccountFilter)?.name}</h3>
+                  <span style={{fontSize:'0.7rem', color:'var(--color-primary)', cursor:'pointer'}} onClick={() => setSelectedAccountFilter(null)}>Fechar</span>
                 </div>
-                {monthData.filter(t => t.accountId === selectedAccountFilter && t.type === 'saida').map(tx => (
+                {monthData.filter(t => t.accountId === selectedAccountFilter).map(tx => (
                   <ItemTx key={tx.id} tx={tx} onDelete={handleDelete} onEdit={openEdit} safeFormat={safeFormat} />
                 ))}
-                {monthData.filter(t => t.accountId === selectedAccountFilter && t.type === 'saida').length === 0 && (
+                {monthData.filter(t => t.accountId === selectedAccountFilter).length === 0 && (
                   <div style={{textAlign:'center', padding:'20px', color:'var(--text-muted-dark)', fontSize:'0.85rem'}}>
-                    Nenhuma despesa encontrada para esta conta.
+                    Nenhum movimento encontrado.
                   </div>
                 )}
               </div>
