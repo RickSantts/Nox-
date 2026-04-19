@@ -164,6 +164,14 @@ const globalStyle = `
   
   /* Search & Settings */
   .search-input { width: 100%; background: var(--bg-surface-dark); border: 1px solid var(--border-dark); padding: 14px 20px 14px 44px; border-radius: 20px; color: white; margin-bottom: 20px; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="%238E9BAE"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>'); background-repeat: no-repeat; background-position: 16px center; }
+  .chip { padding: 8px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 500; cursor: pointer; white-space: nowrap; transition: 0.2s; background: var(--bg-surface-dark); border: 1px solid var(--border-dark); color: var(--text-muted-dark); }
+  .chip.active { background: var(--color-primary); color: white; border-color: var(--color-primary); }
+  .alert-banner { background: rgba(255, 217, 61, 0.15); color: #FFD93D; padding: 12px 16px; border-radius: 16px; font-size: 0.85rem; font-weight: 500; display: flex; align-items: center; gap: 8px; margin-bottom: 16px; border: 1px solid rgba(255, 217, 61, 0.3); }
+  .smart-input-container { display: flex; align-items: center; background: var(--bg-surface-dark); border: 1px solid var(--border-dark); border-radius: 20px; padding: 6px 6px 6px 16px; margin-bottom: 16px; }
+  .smart-input { flex: 1; background: transparent; border: none; color: white; font-size: 0.95rem; }
+  .smart-btn { background: var(--color-primary); color: white; border: none; width: 36px; height: 36px; border-radius: 14px; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s; }
+  .quick-action-btn { background: var(--bg-surface-dark); border: 1px solid var(--border-dark); border-radius: 16px; padding: 10px 14px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 100px; cursor: pointer; flex-shrink: 0; transition: 0.2s; }
+  .quick-action-btn:active { background: var(--bg-surface-hover); transform: scale(0.95); }
   .setting-row { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--border-dark); }
   .btn-outline { background: transparent; border: 1px solid var(--color-primary); color: var(--color-primary); padding: 10px 20px; border-radius: 14px; font-weight: 600; cursor: pointer; transition: 0.2s; }
   .btn-outline:active { background: var(--color-primary); color: white; }
@@ -424,6 +432,7 @@ export default function App() {
   const [transactions, setTransactions] = useState([]);
   const [accounts, setAccounts] = useState(DEFAULT_ACCOUNTS);
   const [budgets, setBudgets] = useState({});
+  const [quickActions, setQuickActions] = useState([{ id: 'qa1', title: '☕ Café', amount: 5, category: 'alimentacao' }, { id: 'qa2', title: '🚌 Ônibus', amount: 4.5, category: 'transporte' }]);
   const [hideValues, setHideValues] = useState(false);
   const [userName, setUserName] = useState('');
   const [showNameModal, setShowNameModal] = useState(false);
@@ -433,6 +442,8 @@ export default function App() {
   // UI States
   const [selectedMonth, setSelectedMonth] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('');
+  const [smartInputText, setSmartInputText] = useState('');
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editTx, setEditTx] = useState(null);
   const [selectedAccountFilter, setSelectedAccountFilter] = useState(null);
@@ -441,11 +452,13 @@ export default function App() {
     const rawTx = localStorage.getItem('financeTransactionsV2');
     const rawAcc = localStorage.getItem('financeAccountsV2');
     const rawBud = localStorage.getItem('financeBudgetsV2');
+    const rawQa = localStorage.getItem('financeQuickActions');
     const rawName = localStorage.getItem('financeUserName');
     
     if (rawTx) setTransactions(JSON.parse(rawTx));
     if (rawAcc) setAccounts(JSON.parse(rawAcc));
     if (rawBud) setBudgets(JSON.parse(rawBud));
+    if (rawQa) setQuickActions(JSON.parse(rawQa));
     if (rawName) setUserName(rawName);
     else setShowNameModal(true);
     setIsLoaded(true);
@@ -474,9 +487,13 @@ export default function App() {
     if (!selectedMonth) return [];
     let d = transactions.filter(t => t.date.startsWith(selectedMonth));
     if (searchQuery) d = d.filter(t => t.description.toLowerCase().includes(searchQuery.toLowerCase()));
+    if (selectedCategoryFilter) {
+      if (selectedCategoryFilter === 'entrada') d = d.filter(t => t.type === 'entrada');
+      else d = d.filter(t => t.category === selectedCategoryFilter);
+    }
     if (selectedAccountFilter) d = d.filter(t => t.accountId === selectedAccountFilter);
     return d.map(t => ({...t, accountName: accounts.find(a=>a.id === t.accountId)?.name || 'Carteira'}));
-  }, [transactions, selectedMonth, searchQuery, accounts, selectedAccountFilter]);
+  }, [transactions, selectedMonth, searchQuery, selectedCategoryFilter, accounts, selectedAccountFilter]);
 
   const { totalBal, monthInc, monthExp } = useMemo(() => {
     let tBal = 0, mInc = 0, mExp = 0;
@@ -513,6 +530,14 @@ export default function App() {
     return { months: labels, inc, exp };
   }, [transactions, availableMonths]);
 
+  const activeAlerts = useMemo(() => {
+    return Object.keys(budgets).map(catKey => {
+      const limit = budgets[catKey];
+      const spent = transactions.filter(t => t.date.startsWith(selectedMonth) && t.category === catKey && t.type === 'saida').reduce((s,t) => s + t.amount, 0);
+      return { catKey, pct: (spent / limit) * 100 };
+    }).filter(a => a.pct >= 85);
+  }, [budgets, transactions, selectedMonth]);
+
   // Handlers
   const openEdit = (tx) => { setEditTx(tx); setSheetOpen(true); };
   
@@ -528,6 +553,42 @@ export default function App() {
     n.sort((a,b) => b.timestamp - a.timestamp);
     setTransactions(n); localStorage.setItem('financeTransactionsV2', JSON.stringify(n));
     if(!isExistingNode && Array.isArray(txData)) setSelectedMonth(txData[0].date.substring(0, 7));
+  };
+
+  const triggerQuickAction = (qa) => {
+    const newTx = {
+      id: `tx_${Date.now()}`, type: 'saida', amount: qa.amount, category: qa.category, 
+      description: qa.title.replace(/[^\w\sà-úÀ-Ú]/g, '').trim(), 
+      date: new Date().toISOString().split('T')[0], timestamp: Date.now(), accountId: accounts[0].id
+    };
+    handleSaveTx(newTx, false);
+  };
+
+  const handleSmartInput = () => {
+    const text = smartInputText.trim();
+    if(!text) return;
+    const numMatch = text.match(/\d+(?:[.,]\d+)?/);
+    if (!numMatch) { alert('Digite um valor numérico. ex: "50 uber"'); return; }
+    
+    const valStr = numMatch[0];
+    const amountVal = parseFloat(valStr.replace(',', '.'));
+    const desc = text.replace(valStr, '').trim() || 'Despesa rápida';
+    
+    const lowerDesc = desc.toLowerCase();
+    let cat = 'outros_saida';
+    if(/(uber|99|taxi|onibus|passagem|gasolina|metro|estac)/.test(lowerDesc)) cat = 'transporte';
+    else if(/(ifood|lanche|mercado|cafe|padaria|almoco|janta|restaurante|pizza|marmita|agua|doce)/.test(lowerDesc)) cat = 'alimentacao';
+    else if(/(farmacia|remedio|medico|convenio|hospital|consulta)/.test(lowerDesc)) cat = 'saude';
+    else if(/(luz|agua|internet|aluguel|condominio|energia|celular)/.test(lowerDesc)) cat = 'moradia';
+    else if(/(cinema|festa|jogo|netflix|bar)/.test(lowerDesc)) cat = 'lazer';
+    
+    const newTx = {
+      id: `tx_${Date.now()}`, type: 'saida', amount: amountVal, category: cat, 
+      description: desc.charAt(0).toUpperCase() + desc.slice(1), 
+      date: new Date().toISOString().split('T')[0], timestamp: Date.now(), accountId: accounts[0].id
+    };
+    handleSaveTx(newTx, false);
+    setSmartInputText('');
   };
 
   const exportData = () => {
@@ -596,6 +657,30 @@ export default function App() {
             <div className="total-balance-box">
               <div style={{fontSize:'0.9rem', opacity:0.8}}>Saldo Acumulado</div>
               <div style={{fontSize:'2.2rem', fontWeight:700}}>{safeFormat(totalBal)}</div>
+            </div>
+
+            {activeAlerts.map(a => (
+              <div key={a.catKey} className="alert-banner" style={{marginTop: '16px', marginBottom: 0}}>
+                <SvgIcon name="alert" size={18}/> Cuidado: Você atingiu {a.pct.toFixed(0)}% da meta de {getCategoryInfo(a.catKey).label}!
+              </div>
+            ))}
+
+            <div style={{marginTop: '16px', marginBottom: '8px'}}>
+              <div className="smart-input-container">
+                <input type="text" className="smart-input" placeholder="Expresso (ex: 35 ifood)" value={smartInputText} onChange={e => setSmartInputText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSmartInput()} />
+                <button className="smart-btn" onClick={handleSmartInput}><SvgIcon name="edit" size={18} /></button>
+              </div>
+              
+              {quickActions.length > 0 && (
+                <div style={{display:'flex', gap:'12px', overflowX:'auto', paddingBottom:'8px'}}>
+                  {quickActions.map(qa => (
+                    <button key={qa.id} className="quick-action-btn" onClick={() => triggerQuickAction(qa)}>
+                      <div style={{fontSize:'0.85rem', fontWeight:600, color:'var(--text-main-dark)'}}>{qa.title}</div>
+                      <div style={{fontSize:'0.75rem', color:'var(--color-expense)'}}>{formatCurrency(qa.amount)}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="card-row">
@@ -727,7 +812,14 @@ export default function App() {
         {/* LIST TAB */}
         {activeTab === 'list' && (
           <div className="content-pad" style={{paddingTop: '20px'}}>
-             <input type="text" className="search-input" placeholder="Buscar por descrição ou nome..." value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} />
+             <input type="text" className="search-input" style={{marginBottom:'12px'}} placeholder="Buscar por descrição ou nome..." value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} />
+             
+             <div style={{display:'flex', gap:'8px', overflowX:'auto', marginBottom:'20px', paddingBottom:'8px'}}>
+               <div className={`chip ${!selectedCategoryFilter ? 'active' : ''}`} onClick={() => setSelectedCategoryFilter('')}>Todas</div>
+               <div className={`chip ${selectedCategoryFilter === 'entrada' ? 'active' : ''}`} onClick={() => setSelectedCategoryFilter('entrada')}>Entradas</div>
+               {EXPENSE_CATEGORIES.map(c => <div key={c.id} className={`chip ${selectedCategoryFilter === c.id ? 'active' : ''}`} onClick={() => setSelectedCategoryFilter(c.id)}>{c.label}</div>)}
+             </div>
+
              <div className="glass-card" style={{minHeight:'60vh'}}>
                 <h3 className="section-title">Resultados de {getMonthLabel(selectedMonth)}</h3>
                 {monthData.map(tx => <ItemTx key={tx.id} tx={tx} onDelete={handleDelete} onEdit={openEdit} safeFormat={safeFormat} />)}
@@ -765,6 +857,28 @@ export default function App() {
 
             <div className="glass-card">
               <h3 className="section-title">Avançado</h3>
+              <div className="setting-row">
+                <div style={{fontSize:'0.9rem'}}>Atalhos Rápidos na Home</div>
+                <button className="btn-outline" onClick={() => {
+                  const title = prompt("Digite o nome do atalho (ex: ☕ Café):");
+                  if(!title) return;
+                  const amtStr = prompt("Digite o valor em R$ (ex: 5.50):");
+                  if(!amtStr) return;
+                  const amt = parseFloat(amtStr.replace(',','.'));
+                  if(!amt) return;
+                  const newQa = [...quickActions, { id: 'qa_'+Date.now(), title, amount: amt, category: 'outros_saida' }];
+                  setQuickActions(newQa); localStorage.setItem('financeQuickActions', JSON.stringify(newQa));
+                }}>+ Adicionar</button>
+              </div>
+              {quickActions.map(qa =>(
+                <div key={qa.id} className="setting-row" style={{padding:'8px 0'}}>
+                   <div style={{fontSize:'0.85rem'}}>{qa.title} <span style={{color:'var(--color-expense)', marginLeft: 8}}>{formatCurrency(qa.amount)}</span></div>
+                   <button className="btn-act del" onClick={() => {
+                     const newQa = quickActions.filter(q => q.id !== qa.id);
+                     setQuickActions(newQa); localStorage.setItem('financeQuickActions', JSON.stringify(newQa));
+                   }}>Cancele</button>
+                </div>
+              ))}
               <div className="setting-row">
                 <div style={{fontSize:'0.9rem'}}>Fazer Backup (JSON)</div>
                 <button className="btn-outline" onClick={exportData}>Baixar</button>
