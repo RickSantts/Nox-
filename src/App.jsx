@@ -436,6 +436,7 @@ export default function App() {
   const [hideValues, setHideValues] = useState(false);
   const [userName, setUserName] = useState('');
   const [showNameModal, setShowNameModal] = useState(false);
+  const [notificationDays, setNotificationDays] = useState(1);
   
   const safeFormat = (val) => hideValues ? 'R$ •••••' : formatCurrency(val);
 
@@ -447,6 +448,16 @@ export default function App() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editTx, setEditTx] = useState(null);
   const [selectedAccountFilter, setSelectedAccountFilter] = useState(null);
+  const [toastMsg, setToastMsg] = useState(null);
+  const [addingShortcut, setAddingShortcut] = useState(false);
+  const [shortcutTitle, setShortcutTitle] = useState('');
+  const [shortcutAmount, setShortcutAmount] = useState('');
+
+  const showToast = (msg, type = 'success') => {
+    setToastMsg({msg, type});
+    setTimeout(() => setToastMsg(null), 3000);
+  };
+
 
   useEffect(() => {
     const rawTx = localStorage.getItem('financeTransactionsV2');
@@ -454,6 +465,7 @@ export default function App() {
     const rawBud = localStorage.getItem('financeBudgetsV2');
     const rawQa = localStorage.getItem('financeQuickActions');
     const rawName = localStorage.getItem('financeUserName');
+    const rawNotiDays = localStorage.getItem('financeNotificationDays');
     
     if (rawTx) setTransactions(JSON.parse(rawTx));
     if (rawAcc) setAccounts(JSON.parse(rawAcc));
@@ -461,6 +473,7 @@ export default function App() {
     if (rawQa) setQuickActions(JSON.parse(rawQa));
     if (rawName) setUserName(rawName);
     else setShowNameModal(true);
+    if (rawNotiDays) setNotificationDays(parseInt(rawNotiDays, 10));
     setIsLoaded(true);
   }, []);
 
@@ -472,6 +485,46 @@ export default function App() {
     setM.add(current);
     return Array.from(setM).sort().reverse();
   }, [transactions, isLoaded]);
+
+  useEffect(() => {
+    if (!isLoaded || !("Notification" in window) || Notification.permission !== "granted") return;
+    
+    const lastNotis = JSON.parse(localStorage.getItem('financeLastNotis') || '{}');
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todayObj = new Date();
+    todayObj.setHours(0,0,0,0);
+    
+    const toNotify = transactions.filter(t => {
+      if (t.type !== 'saida' || !t.date) return false;
+      const [year, month, day] = t.date.split('-');
+      const dueObj = new Date(year, parseInt(month)-1, day);
+      dueObj.setHours(0,0,0,0);
+      
+      const diffTime = dueObj.getTime() - todayObj.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      return diffDays >= 0 && diffDays <= notificationDays && lastNotis[t.id] !== todayStr;
+    });
+
+    if (toNotify.length > 0) {
+      if ('serviceWorker' in navigator && navigator.serviceWorker.ready) {
+        navigator.serviceWorker.ready.then(reg => {
+          reg.showNotification('Contas a Pagar (Nox Finance)', {
+            body: `Você tem ${toNotify.length} despesa(s) vencendo em até ${notificationDays} dia(s).`,
+            icon: '/nox_finance_icone.png',
+            vibrate: [200, 100, 200]
+          });
+        });
+      } else {
+        new Notification('Contas a Pagar (Nox Finance)', {
+          body: `Você tem ${toNotify.length} despesa(s) vencendo em até ${notificationDays} dia(s).`,
+          icon: '/nox_finance_icone.png'
+        });
+      }
+      toNotify.forEach(t => lastNotis[t.id] = todayStr);
+      localStorage.setItem('financeLastNotis', JSON.stringify(lastNotis));
+    }
+  }, [isLoaded, transactions, notificationDays]);
 
   useEffect(() => {
     const currentMonth = getCurrentMonthStr();
@@ -568,7 +621,7 @@ export default function App() {
     const text = smartInputText.trim();
     if(!text) return;
     const numMatch = text.match(/\d+(?:[.,]\d+)?/);
-    if (!numMatch) { alert('Digite um valor numérico. ex: "50 uber"'); return; }
+    if (!numMatch) { showToast('Digite um valor numérico. ex: "50 uber"', 'error'); return; }
     
     const valStr = numMatch[0];
     const amountVal = parseFloat(valStr.replace(',', '.'));
@@ -611,9 +664,9 @@ export default function App() {
           setTransactions(obj.transactions); localStorage.setItem('financeTransactionsV2', JSON.stringify(obj.transactions));
           if(obj.accounts) { setAccounts(obj.accounts); localStorage.setItem('financeAccountsV2', JSON.stringify(obj.accounts)); }
           if(obj.budgets) { setBudgets(obj.budgets); localStorage.setItem('financeBudgetsV2', JSON.stringify(obj.budgets)); }
-          alert('Dados importados com sucesso!');
+          showToast('Dados importados com sucesso!', 'success');
         }
-      } catch(ex) { alert('Arquivo corrompido ou inválido.'); }
+      } catch(ex) { showToast('Arquivo corrompido ou inválido.', 'error'); }
     };
     reader.readAsText(file);
   };
@@ -624,12 +677,20 @@ export default function App() {
     <>
       <style dangerouslySetInnerHTML={{ __html: globalStyle }} />
       <div className="app-container">
+        {toastMsg && (
+          <div className="toast-wrapper" style={{zIndex: 9999}}>
+            <div className="toast-box" style={{background: toastMsg.type === 'error' ? 'var(--color-expense)' : 'var(--color-primary)'}}>
+              <SvgIcon name={toastMsg.type === 'error' ? 'alert' : 'wallet'} size={20} /> {toastMsg.msg}
+            </div>
+          </div>
+        )}
         
         {/* TOP HEADER */}
         <div className="header-area">
           <div style={{display:'flex', gap:'16px', alignItems:'center'}}>
+             <img src="/nox_finance_icone.png" alt="Nox Finance" style={{height: '40px', objectFit: 'contain'}} />
              <div>
-<h1 className="greeting">
+                <h1 className="greeting">
                   Olá{userName ? ', ' + userName : '!'} 
                   <span style={{cursor:'pointer', color:'var(--text-muted-dark)'}} onClick={()=>setHideValues(!hideValues)}>
                     <SvgIcon name={hideValues ? 'eye_off' : 'eye'} size={20} />
@@ -855,20 +916,58 @@ export default function App() {
               ))}
             </div>
 
+            <div className="glass-card" style={{marginBottom: '16px'}}>
+              <h3 className="section-title">Notificações</h3>
+              <div className="setting-row">
+                <div style={{fontSize:'0.9rem'}}>Ativar Alertas no Celular</div>
+                <button className="btn-outline" onClick={() => {
+                  if ("Notification" in window) {
+                    Notification.requestPermission().then(p => {
+                      if(p==='granted') showToast('Notificações ativadas com sucesso!', 'success');
+                      else showToast('Permissão negada.', 'error');
+                    });
+                  } else {
+                    showToast('Seu navegador não suporta notificações.', 'error');
+                  }
+                }}>Autorizar</button>
+              </div>
+              <div className="setting-row">
+                <div style={{fontSize:'0.9rem'}}>Antecedência de Vencimento</div>
+                <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                  <input type="number" className="modern-input" style={{width:'80px', padding:'8px', margin:0, textAlign:'center'}} 
+                    value={notificationDays} min="0" max="30"
+                    onChange={e => {
+                      const v = parseInt(e.target.value) || 0;
+                      setNotificationDays(v);
+                      localStorage.setItem('financeNotificationDays', v.toString());
+                    }} 
+                  />
+                  <span style={{fontSize:'0.85rem'}}>dias</span>
+                </div>
+              </div>
+            </div>
+
             <div className="glass-card">
               <h3 className="section-title">Avançado</h3>
-              <div className="setting-row">
-                <div style={{fontSize:'0.9rem'}}>Atalhos Rápidos na Home</div>
-                <button className="btn-outline" onClick={() => {
-                  const title = prompt("Digite o nome do atalho (ex: ☕ Café):");
-                  if(!title) return;
-                  const amtStr = prompt("Digite o valor em R$ (ex: 5.50):");
-                  if(!amtStr) return;
-                  const amt = parseFloat(amtStr.replace(',','.'));
-                  if(!amt) return;
-                  const newQa = [...quickActions, { id: 'qa_'+Date.now(), title, amount: amt, category: 'outros_saida' }];
-                  setQuickActions(newQa); localStorage.setItem('financeQuickActions', JSON.stringify(newQa));
-                }}>+ Adicionar</button>
+              <div className="setting-row" style={{flexDirection: 'column', alignItems: 'stretch'}}>
+                <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                  <div style={{fontSize:'0.9rem'}}>Atalhos Rápidos na Home</div>
+                  <button className="btn-outline" onClick={() => setAddingShortcut(!addingShortcut)}>{addingShortcut ? 'Cancelar' : '+ Adicionar'}</button>
+                </div>
+                {addingShortcut && (
+                  <div style={{display:'flex', gap:'8px', marginTop:'16px', animation:'slideUpFade 0.2s ease'}}>
+                    <input type="text" className="modern-input" style={{margin:0, flex: 2}} placeholder="Ex: ☕ Café" value={shortcutTitle} onChange={e=>setShortcutTitle(e.target.value)} />
+                    <input type="number" className="modern-input" style={{margin:0, flex: 1}} placeholder="R$ 0" value={shortcutAmount} onChange={e=>setShortcutAmount(e.target.value)} />
+                    <button className="btn-submit" style={{margin:0, width:'50px', padding:'0'}} onClick={() => {
+                        const amt = parseFloat(shortcutAmount.replace(',','.'));
+                        if (!shortcutTitle || !amt) { showToast('Nome e valor são obrigatórios.', 'error'); return; }
+                        const newQa = [...quickActions, { id: 'qa_'+Date.now(), title: shortcutTitle, amount: amt, category: 'outros_saida' }];
+                        setQuickActions(newQa); localStorage.setItem('financeQuickActions', JSON.stringify(newQa));
+                        setAddingShortcut(false); setShortcutTitle(''); setShortcutAmount('');
+                        showToast('Atalho criado criado sucesso!', 'success');
+                    }}><SvgIcon name="config" size={16} /></button>
+                  </div>
+                )}
               </div>
               {quickActions.map(qa =>(
                 <div key={qa.id} className="setting-row" style={{padding:'8px 0'}}>
