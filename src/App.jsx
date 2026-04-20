@@ -103,12 +103,19 @@ const globalStyle = `
   ::-webkit-scrollbar { display: none; }
 
   /* Header */
-  .header-area { padding: 20px 16px 10px; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
-  @media (max-width: 380px) { .header-area { padding: 16px 12px 8px; } }
-  .app-logo { transition: height 0.2s ease, width 0.2s ease; }
-  @media (max-width: 360px) { .app-logo { height: 36px !important; width: 36px !important; } }
-  .greeting { font-size: 1.25rem; font-weight: 600; color: var(--text-main-dark); display: flex; alignItems: center; gap: 8px;}
-  .subtitle { font-size: 0.85rem; color: var(--text-muted-dark); margin-top: -4px;}
+  .header-area { padding: 16px 12px 10px; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  @media (max-width: 380px) { .header-area { padding: 12px 10px 8px; gap: 6px; } }
+  .header-left { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
+  @media (max-width: 360px) { .header-left { gap: 8px; } }
+  .app-logo { height: 36px; width: 36px; objectFit: contain; borderRadius: 10px; flexShrink: 0; }
+  @media (max-width: 360px) { .app-logo { height: 32px !important; width: 32px !important; } }
+  .greeting { font-size: 1.1rem; font-weight: 600; color: var(--text-main-dark); display: flex; alignItems: center; gap: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  @media (max-width: 380px) { .greeting { font-size: 0.95rem; } }
+  @media (max-width: 360px) { .greeting { font-size: 0.85rem; gap: 4px; } }
+  .subtitle { font-size: 0.75rem; color: var(--text-muted-dark); margin-top: -2px; }
+  @media (max-width: 360px) { .subtitle { font-size: 0.65rem; } }
+  .header-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  @media (max-width: 360px) { .header-right { gap: 4px; } }
   
   /* Balances & Wallets */
   .wallet-slider { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 16px; padding: 0 24px 24px; }
@@ -126,12 +133,13 @@ const globalStyle = `
   .month-select {
     appearance: none; -webkit-appearance: none; -moz-appearance: none;
     background: var(--bg-surface-dark); color: var(--text-main-dark);
-    border: 1px solid var(--border-dark); padding: 8px 32px 8px 12px; border-radius: 16px;
-    font-weight: 500; font-size: 0.8rem; cursor: pointer;
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="white" viewBox="0 0 24 24"><path stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></svg>');
-    background-repeat: no-repeat; background-position: right 10px center;
+    border: 1px solid var(--border-dark); padding: 6px 28px 6px 10px; border-radius: 12px;
+    font-weight: 500; font-size: 0.7rem; cursor: pointer;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="white" viewBox="0 0 24 24"><path stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></svg>');
+    background-repeat: no-repeat; background-position: right 8px center;
     pointer-events: auto;
   }
+  @media (max-width: 360px) { .month-select { padding: 5px 24px 5px 8px; font-size: 0.65rem; border-radius: 10px; } }
 
   /* Content Cards */
   .content-pad { padding: 0 16px; display: flex; flex-direction: column; gap: 16px; animation: popIn 0.4s ease; }
@@ -950,19 +958,19 @@ const [notificationDays, setNotificationDays] = useState(1);
         
         {/* TOP HEADER */}
         <div className="header-area">
-          <div style={{display:'flex', gap:'16px', alignItems:'center'}}>
-             <img src="/nox_finance_icone.png" alt="Nox Finance" style={{height: '40px', width:'40px', objectFit:'contain', borderRadius:'10px', flexShrink:0}} className="app-logo" />
-             <div>
+          <div className="header-left">
+             <img src="/nox_finance_icone.png" alt="Nox Finance" className="app-logo" />
+             <div style={{minWidth: 0}}>
                 <h1 className="greeting">
                   Olá{userName ? ', ' + userName : '!'} 
-                  <span style={{cursor:'pointer', color:'var(--text-muted-dark)'}} onClick={()=>setHideValues(!hideValues)}>
-                    <SvgIcon name={hideValues ? 'eye_off' : 'eye'} size={20} />
+                  <span style={{cursor:'pointer', color:'var(--text-muted-dark)', flexShrink: 0}} onClick={()=>setHideValues(!hideValues)}>
+                    <SvgIcon name={hideValues ? 'eye_off' : 'eye'} size={18} />
                   </span>
                 </h1>
                 <p className="subtitle">Gestor de Finanças</p>
              </div>
           </div>
-          <div style={{display:'flex', gap:'12px', alignItems:'center'}}>
+          <div className="header-right">
             {showMonthPicker && (
               <div className="month-picker-container" style={{padding:0, margin:0}}>
                 <select className="month-select" value={selectedMonth} onChange={e=>setSelectedMonth(e.target.value)}>
@@ -1202,67 +1210,67 @@ const [notificationDays, setNotificationDays] = useState(1);
                   onClick={() => setShowAddAccount(true)}
                  >+ Adicionar</button>
               </div>
-              <div style={{display:'flex', flexDirection:'column', gap:'12px'}}>
+<div style={{display:'flex', flexDirection:'column', gap:'12px'}}>
                 {accounts.map(acc => (
-                  <div key={acc.id} style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px', borderRadius:'20px', border:'1px solid var(--border-dark)', background:'var(--bg-surface-hover)'}}>
-                    <div style={{display:'flex', alignItems:'center', gap:'14px'}}>
-                       <div style={{width:'44px', height:'44px', borderRadius:'14px', background:`${acc.color}20`, color:acc.color, display:'flex', justifyContent:'center', alignItems:'center'}}><SvgIcon name={acc.type === 'income' ? 'investimento' : 'wallet'} size={20} /></div>
-                       <div>
-                         <div style={{fontSize:'0.95rem', fontWeight:600, color:'var(--text-main-dark)'}}>{acc.name}</div>
-                         {acc.type === 'credit' && accountLimits[acc.id] > 0 && (
-                           <div style={{fontSize:'0.7rem', color:'var(--text-muted-dark)'}}>
-                             Limite: {safeFormat(accountLimits[acc.id])} • Fech: dia {accountClosingDays[acc.id] || 0}
-                           </div>
-                         )}
-                         {acc.type === 'income' && (
-                           <div style={{fontSize:'0.7rem', color:'var(--color-income)'}}>Apenas receitas</div>
-                         )}
-                         {acc.type === 'default' && (
-                           <div style={{fontSize:'0.7rem', color:'var(--text-muted-dark)'}}>Padrão</div>
-                         )}
+                  <div key={acc.id} style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px', borderRadius:'16px', border:'1px solid var(--border-dark)', background:'var(--bg-surface-hover)'}}>
+                    <div style={{display:'flex', alignItems:'center', gap:'10px', minWidth: 0, flex: 1}}>
+                       <div style={{width:'36px', height:'36px', borderRadius:'10px', background:`${acc.color}20`, color:acc.color, display:'flex', justifyContent:'center', alignItems:'center', flexShrink: 0}}><SvgIcon name={acc.type === 'income' ? 'investimento' : 'wallet'} size={18} /></div>
+                       <div style={{minWidth: 0}}>
+                          <div style={{fontSize:'0.85rem', fontWeight:600, color:'var(--text-main-dark)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{acc.name}</div>
+                          {acc.type === 'credit' && accountLimits[acc.id] > 0 && (
+                            <div style={{fontSize:'0.65rem', color:'var(--text-muted-dark)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>
+                              Limite: {safeFormat(accountLimits[acc.id])} • Fech: dia {accountClosingDays[acc.id] || 0}
+                            </div>
+                          )}
+                          {acc.type === 'income' && (
+                            <div style={{fontSize:'0.65rem', color:'var(--color-income)'}}>Apenas receitas</div>
+                          )}
+                          {acc.type === 'default' && (
+                            <div style={{fontSize:'0.65rem', color:'var(--text-muted-dark)'}}>Padrão</div>
+                          )}
                        </div>
                     </div>
-                    <div style={{display:'flex', alignItems:'center', gap:'4px'}}>
-                      <button 
-                        style={{
-                          padding:'6px 8px', fontSize:'0.6rem', borderRadius:'8px', border:'none', 
-                          background: 'var(--bg-surface-dark)',
-                          color: 'var(--text-muted-dark)',
-                          cursor:'pointer', fontWeight:500
-                        }}
-                        onClick={() => setSelectedAccountFilter(selectedAccountFilter === acc.id + '_edit' ? null : acc.id + '_edit')}
-                        title="Editar"
-                      >
-                        ✏️
-                      </button>
-                      {acc.type !== 'default' && (
-                        <button 
-                          style={{
-                            padding:'6px 8px', fontSize:'0.6rem', borderRadius:'8px', border:'none', 
-                            background: 'rgba(255,74,107,0.1)',
-                            color: 'var(--color-expense)',
-                            cursor:'pointer', fontWeight:500
-                          }}
-                          onClick={() => setDeleteConfirmAccount(acc.id)}
-                          title="Excluir"
-                        >
-                          🗑️
-                        </button>
-                      )}
-                      <button 
-                        style={{
-                          padding:'6px 10px', fontSize:'0.65rem', borderRadius:'8px', border:'none', 
-                          background: selectedAccountFilter === acc.id ? 'var(--color-primary)' : 'var(--bg-surface-dark)',
-                          color: selectedAccountFilter === acc.id ? 'white' : 'var(--text-muted-dark)',
-                          cursor:'pointer', fontWeight:500
-                        }}
-                        onClick={() => setSelectedAccountFilter(selectedAccountFilter === acc.id ? null : acc.id)}
-                      >
-                        {selectedAccountFilter === acc.id ? '✕' : 'Ver'}
-                      </button>
-                      <div style={{fontSize:'1rem', fontWeight:700, color: (accountBalances[acc.id]||0) < 0 ? 'var(--color-expense)' : 'var(--text-main-dark)', minWidth:'70px', textAlign:'right'}}>
-                         {safeFormat(accountBalances[acc.id] || 0)}
-                      </div>
+                    <div style={{display:'flex', alignItems:'center', gap:'4px', flexShrink: 0}}>
+                       <button 
+                         style={{
+                           padding:'5px 6px', fontSize:'0.55rem', borderRadius:'6px', border:'none', 
+                           background: 'var(--bg-surface-dark)',
+                           color: 'var(--text-muted-dark)',
+                           cursor:'pointer', fontWeight:500
+                         }}
+                         onClick={() => setSelectedAccountFilter(selectedAccountFilter === acc.id + '_edit' ? null : acc.id + '_edit')}
+                         title="Editar"
+                       >
+                         ✏️
+                       </button>
+                       {acc.type !== 'default' && (
+                         <button 
+                           style={{
+                             padding:'5px 6px', fontSize:'0.55rem', borderRadius:'6px', border:'none', 
+                             background: 'rgba(255,74,107,0.1)',
+                             color: 'var(--color-expense)',
+                             cursor:'pointer', fontWeight:500
+                           }}
+                           onClick={() => setDeleteConfirmAccount(acc.id)}
+                           title="Excluir"
+                         >
+                           🗑️
+                         </button>
+                       )}
+                       <button 
+                         style={{
+                           padding:'5px 8px', fontSize:'0.6rem', borderRadius:'6px', border:'none', 
+                           background: selectedAccountFilter === acc.id ? 'var(--color-primary)' : 'var(--bg-surface-dark)',
+                           color: selectedAccountFilter === acc.id ? 'white' : 'var(--text-muted-dark)',
+                           cursor:'pointer', fontWeight:500
+                         }}
+                         onClick={() => setSelectedAccountFilter(selectedAccountFilter === acc.id ? null : acc.id)}
+                       >
+                         {selectedAccountFilter === acc.id ? '✕' : 'Ver'}
+                       </button>
+                       <div style={{fontSize:'0.85rem', fontWeight:700, color: (accountBalances[acc.id]||0) < 0 ? 'var(--color-expense)' : 'var(--text-main-dark)', minWidth:'60px', textAlign:'right', whiteSpace:'nowrap'}}>
+                          {safeFormat(accountBalances[acc.id] || 0)}
+                       </div>
                     </div>
                   </div>
                 ))}
