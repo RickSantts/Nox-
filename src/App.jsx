@@ -16,15 +16,19 @@ const SvgIcon = ({ name, size = 24 }) => {
     investimento: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />,
     presente: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />,
     empty_box: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4M12 12L12 21 M4.5 8L12 11 M19.5 8L12 11" />,
-    trash: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />,
+    trash: <g strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/><line x1="4" y1="7" x2="4" y2="7.01"/><line x1="9" y1="5" x2="9" y2="4"/><line x1="14" y1="5" x2="14" y2="4"/><line x1="19" y1="5" x2="19" y2="4"/></g>,
     alert: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />,
     config: <g><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></g>,
     wallet: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2v-8z m0 0V8a2 2 0 012-2h10" />,
     search: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />,
-    edit: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />,
+    edit: <g strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></g>,
     eye: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />,
     eye_off: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />,
-    chart: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+    chart: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />,
+    bank: <g strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"><polygon points="12 2 2 7 22 7"/><line x1="6" y1="22" x2="6" y2="11"/><line x1="10" y1="22" x2="10" y2="11"/><line x1="14" y1="22" x2="14" y2="11"/><line x1="18" y1="22" x2="18" y2="11"/><line x1="2" y1="22" x2="22" y2="22"/></g>,
+    credit_card: <g strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></g>,
+    money: <g strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"><rect x="2" y="6" width="20" height="12" rx="2" /><circle cx="12" cy="12" r="2" /><path d="M6 12h.01M18 12h.01" /></g>,
+    pix: <g strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"><path d="M12 3l8 9-8 9-8-9 8-9z" /><path d="M12 6.5l4.5 5.5-4.5 5.5-4.5-5.5 4.5-5.5z" /></g>
   };
   return (
     <svg width={size} height={size} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -900,6 +904,15 @@ const [notificationDays, setNotificationDays] = useState(1);
     reader.readAsText(file);
   };
 
+  const getAccountIcon = (acc) => {
+    const n = acc.name.toLowerCase();
+    if (n.includes('pix')) return 'pix';
+    if (n.includes('dinheiro') || n.includes('cash')) return 'money';
+    if (acc.type === 'credit' || n.includes('cartão') || n.includes('cartao') || n.includes('card')) return 'credit_card';
+    if (acc.type === 'income' || n.includes('receita')) return 'chart';
+    return 'bank';
+  };
+
   if(!isLoaded) return null;
 
   return (
@@ -1214,7 +1227,7 @@ const [notificationDays, setNotificationDays] = useState(1);
                 {accounts.map(acc => (
                   <div key={acc.id} style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px', borderRadius:'16px', border:'1px solid var(--border-dark)', background:'var(--bg-surface-hover)'}}>
                     <div style={{display:'flex', alignItems:'center', gap:'10px', minWidth: 0, flex: 1}}>
-                       <div style={{width:'36px', height:'36px', borderRadius:'10px', background:`${acc.color}20`, color:acc.color, display:'flex', justifyContent:'center', alignItems:'center', flexShrink: 0}}><SvgIcon name={acc.type === 'income' ? 'investimento' : 'wallet'} size={18} /></div>
+                       <div style={{width:'36px', height:'36px', borderRadius:'10px', background:`${acc.color}20`, color:acc.color, display:'flex', justifyContent:'center', alignItems:'center', flexShrink: 0}}><SvgIcon name={getAccountIcon(acc)} size={18} /></div>
                        <div style={{minWidth: 0}}>
                           <div style={{fontSize:'0.85rem', fontWeight:600, color:'var(--text-main-dark)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{acc.name}</div>
                           {acc.type === 'credit' && accountLimits[acc.id] > 0 && (
@@ -1241,7 +1254,7 @@ const [notificationDays, setNotificationDays] = useState(1);
                          onClick={() => setSelectedAccountFilter(selectedAccountFilter === acc.id + '_edit' ? null : acc.id + '_edit')}
                          title="Editar"
                        >
-                         ✏️
+                         <SvgIcon name="edit" size={14} />
                        </button>
                        {acc.type !== 'default' && (
                          <button 
@@ -1254,7 +1267,7 @@ const [notificationDays, setNotificationDays] = useState(1);
                            onClick={() => setDeleteConfirmAccount(acc.id)}
                            title="Excluir"
                          >
-                           🗑️
+                           <SvgIcon name="trash" size={14} />
                          </button>
                        )}
                        <button 
