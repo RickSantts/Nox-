@@ -105,6 +105,8 @@ const globalStyle = `
   /* Header */
   .header-area { padding: 20px 16px 10px; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
   @media (max-width: 380px) { .header-area { padding: 16px 12px 8px; } }
+  .app-logo { transition: height 0.2s ease, width 0.2s ease; }
+  @media (max-width: 360px) { .app-logo { height: 36px !important; width: 36px !important; } }
   .greeting { font-size: 1.25rem; font-weight: 600; color: var(--text-main-dark); display: flex; alignItems: center; gap: 8px;}
   .subtitle { font-size: 0.85rem; color: var(--text-muted-dark); margin-top: -4px;}
   
@@ -122,11 +124,13 @@ const globalStyle = `
   /* Month Picker */
   .month-picker-container { padding: 0; margin: 0; display: flex; justify-content: flex-end; }
   .month-select {
-    appearance: none; background: var(--bg-surface-dark); color: var(--text-main-dark);
+    appearance: none; -webkit-appearance: none; -moz-appearance: none;
+    background: var(--bg-surface-dark); color: var(--text-main-dark);
     border: 1px solid var(--border-dark); padding: 8px 32px 8px 12px; border-radius: 16px;
     font-weight: 500; font-size: 0.8rem; cursor: pointer;
     background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="white" viewBox="0 0 24 24"><path stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></svg>');
     background-repeat: no-repeat; background-position: right 10px center;
+    pointer-events: auto;
   }
 
   /* Content Cards */
@@ -271,7 +275,7 @@ const ChartDonut = ({ data, safeFormat }) => {
   );
 };
 
-const ItemTx = ({ tx, onDelete, onEdit, safeFormat }) => {
+const ItemTx = ({ tx, onDelete, onEdit, safeFormat, showDate = true }) => {
   const [opened, setOpened] = useState(false);
   const info = getCategoryInfo(tx.category);
   const isInc = tx.type === 'entrada';
@@ -288,7 +292,7 @@ const ItemTx = ({ tx, onDelete, onEdit, safeFormat }) => {
           <div className="tx-val" style={{color: isInc ? 'var(--color-income)' : 'var(--text-main-dark)'}}>
             {isInc ? '+' : '-'} {safeFormat(tx.amount).replace('R$', '').trim()}
           </div>
-          <div className="tx-date">{tx.date.split('-').reverse().join('/')}</div>
+          {showDate && <div className="tx-date">{tx.date.split('-').reverse().join('/')}</div>}
         </div>
       </div>
       
@@ -312,7 +316,8 @@ const BottomSheet = ({ onClose, onSave, initialData, accounts }) => {
   const [category, setCategory] = useState(initialData?.category || '');
   const [desc, setDesc] = useState(initialData?.description || '');
   const [date, setDate] = useState(initialData?.date || new Date().toISOString().split('T')[0]);
-  const [accountId, setAccountId] = useState(initialData?.accountId || accounts[0].id);
+  const [dateEnabled, setDateEnabled] = useState(false);
+  const [accountId, setAccountId] = useState(initialData?.accountId || 'acc_pix');
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurrenceCount, setRecurrenceCount] = useState('2');
   const [errorMsg, setErrorMsg] = useState('');
@@ -327,8 +332,8 @@ const BottomSheet = ({ onClose, onSave, initialData, accounts }) => {
     if (!category) return triggerError('Por favor, selecione uma categoria.');
 
     const catInfo = getCategoryInfo(category);
-    const descFinal = mode === 'fast' || !desc.trim() ? catInfo.label : desc;
-    const dateFinal = mode === 'fast' ? new Date().toISOString().split('T')[0] : date;
+    const descFinal = (mode === 'fast' && !dateEnabled) || !desc.trim() ? catInfo.label : desc;
+    const dateFinal = (mode === 'fast' && !dateEnabled) ? new Date().toISOString().split('T')[0] : date;
     const numMonths = (!isEdit && mode === 'detail' && isRecurring) ? parseInt(recurrenceCount) || 1 : 1;
     
     const nowStamp = Date.now();
@@ -381,7 +386,7 @@ const BottomSheet = ({ onClose, onSave, initialData, accounts }) => {
           <button style={{flex:1, padding:'12px', borderRadius:'16px', fontWeight:600, border:`2px solid ${type==='entrada' ? 'var(--color-income)' : 'var(--bg-surface-dark)'}`, background: type==='entrada' ? 'rgba(18,201,155,0.1)' : 'transparent', color: type==='entrada'?'var(--color-income)':'var(--text-muted-dark)'}} onClick={()=>setType('entrada')}>Receita</button>
         </div>
 
-        <div style={{display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:'8px', marginBottom:'24px'}}>
+        <div style={{display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:'8px', marginBottom:'16px'}}>
           {cats.map(c => (
             <div key={c.id} onClick={()=>setCategory(c.id)} style={{display:'flex', flexDirection:'column', alignItems:'center', background:'var(--bg-surface-dark)', borderRadius:'16px', padding:'10px 4px', border:`2px solid ${category===c.id ? 'var(--color-primary)' : 'transparent'}`, cursor:'pointer'}}>
               <div style={{color: c.color, marginBottom:'4px'}}><SvgIcon name={c.id} /></div>
@@ -390,10 +395,22 @@ const BottomSheet = ({ onClose, onSave, initialData, accounts }) => {
           ))}
         </div>
 
+        {mode === 'fast' && (
+          <div style={{marginBottom:'16px'}}>
+            <label style={{display:'flex', alignItems:'center', gap:'8px', color:'var(--text-muted-dark)', fontSize:'0.85rem', cursor:'pointer'}}>
+              <input type="checkbox" checked={dateEnabled} onChange={e=>setDateEnabled(e.target.checked)} style={{width:'18px', height:'18px'}} />
+              Definir data de vencimento
+            </label>
+            {dateEnabled && (
+              <input type="date" className="modern-input" style={{marginTop:'8px'}} value={date} onChange={e=>setDate(e.target.value)} />
+            )}
+          </div>
+        )}
+
         {mode === 'detail' && (
           <div style={{animation: 'popIn 0.3s ease'}}>
             <select className="modern-select" value={accountId} onChange={e=>setAccountId(e.target.value)}>
-              {accounts.map(acc => <option key={acc.id} value={acc.id}>{acc.name}</option>)}
+              {(type === 'entrada' ? accounts : accounts.filter(a => a.type !== 'income')).map(acc => <option key={acc.id} value={acc.id}>{acc.name}</option>)}
             </select>
             <input type="text" className="modern-input" placeholder="Descrição (ex: Almoço)" value={desc} onChange={e=>setDesc(e.target.value)} />
             <input type="date" className="modern-input" value={date} onChange={e=>setDate(e.target.value)} />
@@ -419,9 +436,9 @@ const BottomSheet = ({ onClose, onSave, initialData, accounts }) => {
 // --- APP ---
 
 const DEFAULT_ACCOUNTS = [
-  { id: 'acc_main', name: 'Conta Principal', color: '#5944FF' },
-  { id: 'acc_card', name: 'Cartão de Clássico', color: '#8A05BE' },
-  { id: 'acc_cash', name: 'Em Dinheiro', color: '#12C99B' }
+  { id: 'acc_pix', name: 'PIX', color: '#00C896', type: 'default' },
+  { id: 'acc_cash', name: 'Dinheiro', color: '#12C99B', type: 'default' },
+  { id: 'acc_income', name: 'Receita', color: '#FFD93D', type: 'income' }
 ];
 
 export default function App() {
@@ -436,8 +453,16 @@ export default function App() {
   const [hideValues, setHideValues] = useState(false);
   const [userName, setUserName] = useState('');
   const [showNameModal, setShowNameModal] = useState(false);
-  const [notificationDays, setNotificationDays] = useState(1);
-  
+const [notificationDays, setNotificationDays] = useState(1);
+  const [showMonthPicker, setShowMonthPicker] = useState(() => {
+    const saved = localStorage.getItem('financeShowMonthPicker');
+    return saved !== null ? saved === 'true' : true;
+  });
+  const [showDateOnExpense, setShowDateOnExpense] = useState(() => {
+    const saved = localStorage.getItem('financeShowDateOnExpense');
+    return saved !== null ? saved === 'true' : true;
+  });
+   
   const safeFormat = (val) => hideValues ? 'R$ •••••' : formatCurrency(val);
 
   // UI States
@@ -445,6 +470,8 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('');
   const [smartInputText, setSmartInputText] = useState('');
+  const [smartInputDate, setSmartInputDate] = useState('');
+  const [smartDateEnabled, setSmartDateEnabled] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editTx, setEditTx] = useState(null);
   const [selectedAccountFilter, setSelectedAccountFilter] = useState(null);
@@ -452,6 +479,21 @@ export default function App() {
   const [addingShortcut, setAddingShortcut] = useState(false);
   const [shortcutTitle, setShortcutTitle] = useState('');
   const [shortcutAmount, setShortcutAmount] = useState('');
+  const [accountLimits, setAccountLimits] = useState(() => {
+    const saved = localStorage.getItem('financeAccountLimits');
+    return saved ? JSON.parse(saved) : {};
+  });
+  const [accountClosingDays, setAccountClosingDays] = useState(() => {
+    const saved = localStorage.getItem('financeAccountClosingDays');
+    return saved ? JSON.parse(saved) : {};
+  });
+  const [selectedAccountMonth, setSelectedAccountMonth] = useState('');
+  const [showAddAccount, setShowAddAccount] = useState(false);
+  const [newAccountName, setNewAccountName] = useState('');
+  const [newAccountType, setNewAccountType] = useState('default');
+  const [newAccountColor, setNewAccountColor] = useState('#5944FF');
+  const [newAccountLimit, setNewAccountLimit] = useState('');
+  const [newAccountClosingDay, setNewAccountClosingDay] = useState('');
 
   const showToast = (msg, type = 'success') => {
     setToastMsg({msg, type});
@@ -503,7 +545,8 @@ export default function App() {
       const diffTime = dueObj.getTime() - todayObj.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       
-      return diffDays >= 0 && diffDays <= notificationDays && lastNotis[t.id] !== todayStr;
+      const isToday = t.date === todayStr;
+      return !isToday && diffDays >= 0 && diffDays <= notificationDays && lastNotis[t.id] !== todayStr;
     });
 
     if (toNotify.length > 0) {
@@ -550,17 +593,33 @@ export default function App() {
 
   const { totalBal, monthInc, monthExp } = useMemo(() => {
     let tBal = 0, mInc = 0, mExp = 0;
-    transactions.forEach(t => { if (t.date.substring(0, 7) <= selectedMonth) tBal += (t.type === 'entrada' ? t.amount : -t.amount); });
+    transactions.forEach(t => { 
+      if (t.date.substring(0, 7) <= selectedMonth) {
+        const acc = accounts.find(a => a.id === t.accountId);
+        if (acc && acc.type === 'income') {
+          if (t.type === 'entrada') tBal += t.amount;
+        } else {
+          tBal += (t.type === 'entrada' ? t.amount : -t.amount);
+        }
+      }
+    });
     monthData.forEach(t => { if(t.type === 'entrada') mInc += t.amount; else mExp += t.amount; });
     return { totalBal: tBal, monthInc: mInc, monthExp: mExp };
-  }, [transactions, monthData, selectedMonth]);
+  }, [transactions, monthData, selectedMonth, accounts]);
 
   const accountBalances = useMemo(() => {
     const bals = {};
     accounts.forEach(a => bals[a.id] = 0);
     transactions.forEach(t => {
-      if (t.date.substring(0, 7) <= selectedMonth) {
-        if (bals[t.accountId] !== undefined) bals[t.accountId] += (t.type === 'entrada' ? t.amount : -t.amount);
+      if (bals[t.accountId] !== undefined && t.date.substring(0, 7) <= selectedMonth) {
+        const acc = accounts.find(a => a.id === t.accountId);
+        if (acc) {
+          if (acc.type === 'income') {
+            if (t.type === 'entrada') bals[t.accountId] += t.amount;
+          } else {
+            bals[t.accountId] += (t.type === 'entrada' ? t.amount : -t.amount);
+          }
+        }
       }
     });
     return bals;
@@ -591,6 +650,106 @@ export default function App() {
     }).filter(a => a.pct >= 85);
   }, [budgets, transactions, selectedMonth]);
 
+  const monthProjection = useMemo(() => {
+    const current = getCurrentMonthStr();
+    if (selectedMonth !== current) return null;
+    
+    const today = new Date();
+    const dayOfMonth = today.getDate();
+    const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+    const monthProgress = dayOfMonth / daysInMonth;
+    
+    const totalSpent = monthData.filter(t => t.type === 'saida').reduce((s,t) => s + t.amount, 0);
+    const projectedTotal = monthProgress > 0 ? totalSpent / monthProgress : totalSpent;
+    
+    return { spent: totalSpent, projected: projectedTotal, progress: monthProgress * 100 };
+  }, [monthData, selectedMonth]);
+
+  const patrimonyEvolution = useMemo(() => {
+    const ms = [...availableMonths].slice(0, 12).reverse();
+    let runningBal = 0;
+    return ms.map(m => {
+      const monthTxs = transactions.filter(t => t.date.startsWith(m));
+      monthTxs.forEach(t => runningBal += (t.type === 'entrada' ? t.amount : -t.amount));
+      return { month: m, balance: runningBal };
+    });
+  }, [transactions, availableMonths]);
+
+  const categoryTrend = useMemo(() => {
+    const ms = [...availableMonths].slice(0, 3).reverse();
+    const trendMap = {};
+    
+    ms.forEach(m => {
+      const monthTxs = transactions.filter(t => t.date.startsWith(m) && t.type === 'saida');
+      monthTxs.forEach(t => {
+        if (!trendMap[t.category]) trendMap[t.category] = [];
+        trendMap[t.category].push({ month: m, amount: t.amount });
+      });
+    });
+    
+    return Object.keys(trendMap).map(cat => {
+      const months = trendMap[cat];
+      if (months.length < 2) return null;
+      const first = months[0].amount;
+      const last = months[months.length - 1].amount;
+      const change = first > 0 ? ((last - first) / first) * 100 : 0;
+      const info = getCategoryInfo(cat);
+      return { category: cat, label: info.label, color: info.color, change, first, last };
+    }).filter(Boolean).sort((a,b) => Math.abs(b.change) - Math.abs(a.change));
+  }, [transactions, availableMonths]);
+
+  const monthlyComparison = useMemo(() => {
+    const ms = [...availableMonths].slice(0, 2).reverse();
+    if (ms.length < 2) return null;
+    const [current, previous] = ms;
+    const currentMonth = transactions.filter(t => t.date.startsWith(current));
+    const prevMonth = transactions.filter(t => t.date.startsWith(previous));
+    
+    const currInc = currentMonth.filter(t => t.type === 'entrada').reduce((s,t) => s + t.amount, 0);
+    const prevInc = prevMonth.filter(t => t.type === 'entrada').reduce((s,t) => s + t.amount, 0);
+    const currExp = currentMonth.filter(t => t.type === 'saida').reduce((s,t) => s + t.amount, 0);
+    const prevExp = prevMonth.filter(t => t.type === 'saida').reduce((s,t) => s + t.amount, 0);
+    
+    return {
+      current: { income: currInc, expense: currExp, balance: currInc - currExp },
+      previous: { income: prevInc, expense: prevExp, balance: prevInc - prevExp },
+      incomeChange: prevInc > 0 ? ((currInc - prevInc) / prevInc) * 100 : 0,
+      expenseChange: prevExp > 0 ? ((currExp - prevExp) / prevExp) * 100 : 0,
+      balanceChange: prevInc - prevExp !== 0 ? ((currInc - currExp) - (prevInc - prevExp)) / Math.abs(prevInc - prevExp) * 100 : 0
+    };
+  }, [transactions, availableMonths]);
+
+  const cardStatementData = useMemo(() => {
+    if (!selectedAccountFilter) return null;
+    const acc = accounts.find(a => a.id === selectedAccountFilter);
+    if (!acc || acc.type !== 'credit') return null;
+    
+    const closingDay = accountClosingDays[selectedAccountFilter] || 0;
+    const now = new Date();
+    let startDate, endDate;
+    
+    if (now.getDate() <= closingDay) {
+      startDate = new Date(now.getFullYear(), now.getMonth() - 1, closingDay + 1);
+      endDate = new Date(now.getFullYear(), now.getMonth(), closingDay);
+    } else {
+      startDate = new Date(now.getFullYear(), now.getMonth(), closingDay + 1);
+      endDate = new Date(now.getFullYear(), now.getMonth() + 1, closingDay);
+    }
+    
+    const startStr = startDate.toISOString().split('T')[0];
+    const endStr = endDate.toISOString().split('T')[0];
+    
+    const periodTxs = transactions.filter(t => 
+      t.accountId === selectedAccountFilter && 
+      t.date >= startStr && t.date <= endStr
+    ).sort((a,b) => a.date.localeCompare(b.date));
+    
+    const total = periodTxs.filter(t => t.type === 'saida').reduce((s,t) => s + t.amount, 0);
+    const limit = accountLimits[selectedAccountFilter] || 0;
+    
+    return { startStr, endStr, transactions: periodTxs, total, limit, closingDay };
+  }, [transactions, selectedAccountFilter, accountLimits, accountClosingDays, accounts]);
+
   // Handlers
   const openEdit = (tx) => { setEditTx(tx); setSheetOpen(true); };
   
@@ -608,11 +767,71 @@ export default function App() {
     if(!isExistingNode && Array.isArray(txData)) setSelectedMonth(txData[0].date.substring(0, 7));
   };
 
+  const handleAddAccount = () => {
+    if (!newAccountName.trim()) { showToast('Nome é obrigatório', 'error'); return; }
+    const newId = 'acc_' + Date.now();
+    const newAcc = { 
+      id: newId, 
+      name: newAccountName.trim(), 
+      color: newAccountColor, 
+      type: newAccountType 
+    };
+    const updated = [...accounts, newAcc];
+    setAccounts(updated);
+    localStorage.setItem('financeAccountsV2', JSON.stringify(updated));
+    
+    if (newAccountType === 'credit' && newAccountLimit) {
+      const nl = {...accountLimits, [newId]: parseFloat(newAccountLimit)};
+      setAccountLimits(nl);
+      localStorage.setItem('financeAccountLimits', JSON.stringify(nl));
+    }
+    if (newAccountType === 'credit' && newAccountClosingDay) {
+      const nc = {...accountClosingDays, [newId]: parseInt(newAccountClosingDay)};
+      setAccountClosingDays(nc);
+      localStorage.setItem('financeAccountClosingDays', JSON.stringify(nc));
+    }
+    
+    setShowAddAccount(false);
+    setNewAccountName('');
+    setNewAccountType('default');
+    setNewAccountColor('#5944FF');
+    setNewAccountLimit('');
+    setNewAccountClosingDay('');
+    showToast('Conta adicionada!', 'success');
+  };
+
+  const handleDeleteAccount = (accId) => {
+    const acc = accounts.find(a => a.id === accId);
+    const balance = accountBalances[accId] || 0;
+    if (balance !== 0 && !confirm(`Esta conta tem saldo de ${safeFormat(balance)}. Deseja excluir mesmo assim?`)) return;
+    
+    if (confirm(`Tem certeza que deseja excluir "${acc?.name}"?`)) {
+      const updated = accounts.filter(a => a.id !== accId);
+      setAccounts(updated);
+      localStorage.setItem('financeAccountsV2', JSON.stringify(updated));
+      if (selectedAccountFilter === accId) setSelectedAccountFilter(null);
+      if (selectedAccountFilter === accId + '_edit') setSelectedAccountFilter(null);
+      showToast('Conta removida', 'success');
+    }
+  };
+
+  const handleEditAccount = (accId, newName, newColor) => {
+    const updated = accounts.map(a => a.id === accId ? { ...a, name: newName, color: newColor } : a);
+    setAccounts(updated);
+    localStorage.setItem('financeAccountsV2', JSON.stringify(updated));
+    showToast('Conta atualizada!', 'success');
+  };
+
+  const [editingAccount, setEditingAccount] = useState(null);
+  const [editAccountName, setEditAccountName] = useState('');
+  const [editAccountColor, setEditAccountColor] = useState('#5944FF');
+  const [deleteConfirmAccount, setDeleteConfirmAccount] = useState(null);
+
   const triggerQuickAction = (qa) => {
     const newTx = {
       id: `tx_${Date.now()}`, type: 'saida', amount: qa.amount, category: qa.category, 
       description: qa.title.replace(/[^\w\sà-úÀ-Ú]/g, '').trim(), 
-      date: new Date().toISOString().split('T')[0], timestamp: Date.now(), accountId: accounts[0].id
+      date: new Date().toISOString().split('T')[0], timestamp: Date.now(), accountId: 'acc_pix'
     };
     handleSaveTx(newTx, false);
   };
@@ -638,10 +857,12 @@ export default function App() {
     const newTx = {
       id: `tx_${Date.now()}`, type: 'saida', amount: amountVal, category: cat, 
       description: desc.charAt(0).toUpperCase() + desc.slice(1), 
-      date: new Date().toISOString().split('T')[0], timestamp: Date.now(), accountId: accounts[0].id
+      date: smartDateEnabled && smartInputDate ? smartInputDate : new Date().toISOString().split('T')[0], timestamp: Date.now(), accountId: 'acc_pix'
     };
     handleSaveTx(newTx, false);
     setSmartInputText('');
+    setSmartInputDate('');
+    setSmartDateEnabled(false);
   };
 
   const exportData = () => {
@@ -685,10 +906,52 @@ export default function App() {
           </div>
         )}
         
+        {deleteConfirmAccount && (
+          <div className="name-modal-overlay">
+            <div className="name-modal" style={{maxWidth:'320px'}}>
+              <div style={{marginBottom:'16px', display:'flex', justifyContent:'center'}}>
+                <div style={{width:'60px', height:'60px', borderRadius:'30px', background:'rgba(255,74,107,0.1)', display:'flex', justifyContent:'center', alignItems:'center'}}>
+                  <SvgIcon name="alert" size={32} />
+                </div>
+              </div>
+              <h2 style={{fontSize:'1.2rem', marginBottom:'8px'}}>Excluir Conta?</h2>
+              {(accountBalances[deleteConfirmAccount] || 0) !== 0 && (
+                <p style={{fontSize:'0.85rem', color:'var(--color-warning)', marginBottom:'12px'}}>
+                  Esta conta tem saldo de {safeFormat(accountBalances[deleteConfirmAccount])}.
+                </p>
+              )}
+              <p style={{fontSize:'0.9rem', color:'var(--text-muted-dark)', marginBottom:'24px'}}>
+                Tem certeza que deseja excluir "{accounts.find(a => a.id === deleteConfirmAccount)?.name}"? Esta ação não pode ser desfeita.
+              </p>
+              <div style={{display:'flex', gap:'12px'}}>
+                <button 
+                  style={{flex:1, padding:'12px', borderRadius:'12px', border:'1px solid var(--border-dark)', background:'var(--bg-surface-dark)', color:'var(--text-muted-dark)', fontWeight:600, cursor:'pointer'}}
+                  onClick={() => setDeleteConfirmAccount(null)}
+                >
+                  Cancelar
+                </button>
+                <button 
+                  style={{flex:1, padding:'12px', borderRadius:'12px', border:'none', background:'var(--color-expense)', color:'white', fontWeight:600, cursor:'pointer'}}
+                  onClick={() => {
+                    const updated = accounts.filter(a => a.id !== deleteConfirmAccount);
+                    setAccounts(updated);
+                    localStorage.setItem('financeAccountsV2', JSON.stringify(updated));
+                    if (selectedAccountFilter === deleteConfirmAccount) setSelectedAccountFilter(null);
+                    setDeleteConfirmAccount(null);
+                    showToast('Conta removida', 'success');
+                  }}
+                >
+                  Excluir
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        
         {/* TOP HEADER */}
         <div className="header-area">
           <div style={{display:'flex', gap:'16px', alignItems:'center'}}>
-             <img src="/nox_finance_icone.png" alt="Nox Finance" style={{height: '40px', objectFit: 'contain'}} />
+             <img src="/nox_finance_icone.png" alt="Nox Finance" style={{height: '40px', width:'40px', objectFit:'contain', borderRadius:'10px', flexShrink:0}} className="app-logo" />
              <div>
                 <h1 className="greeting">
                   Olá{userName ? ', ' + userName : '!'} 
@@ -700,11 +963,13 @@ export default function App() {
              </div>
           </div>
           <div style={{display:'flex', gap:'12px', alignItems:'center'}}>
-            <div className="month-picker-container" style={{padding:0, margin:0}}>
-              <select className="month-select" value={selectedMonth} onChange={e=>setSelectedMonth(e.target.value)}>
-                {availableMonths.map(m => <option key={m} value={m}>{getMonthLabel(m)}</option>)}
-              </select>
-            </div>
+            {showMonthPicker && (
+              <div className="month-picker-container" style={{padding:0, margin:0}}>
+                <select className="month-select" value={selectedMonth} onChange={e=>setSelectedMonth(e.target.value)}>
+                  {availableMonths.map(m => <option key={m} value={m}>{getMonthLabel(m)}</option>)}
+                </select>
+              </div>
+            )}
             <div style={{cursor:'pointer', color:'var(--text-muted-dark)'}} onClick={()=>setActiveTab('config')}>
                <SvgIcon name="config" size={24} />
             </div>
@@ -728,9 +993,16 @@ export default function App() {
 
             <div style={{marginTop: '16px', marginBottom: '8px'}}>
               <div className="smart-input-container">
-                <input type="text" className="smart-input" placeholder="Expresso (ex: 35 ifood)" value={smartInputText} onChange={e => setSmartInputText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSmartInput()} />
+                <input type="text" className="smart-input" placeholder="Expresso (ex: 35 ifood para 15/05)" value={smartInputText} onChange={e => setSmartInputText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSmartInput()} />
                 <button className="smart-btn" onClick={handleSmartInput}><SvgIcon name="edit" size={18} /></button>
               </div>
+              <label style={{display:'flex', alignItems:'center', gap:'8px', color:'var(--text-muted-dark)', fontSize:'0.8rem', marginTop:'8px', cursor:'pointer'}}>
+                <input type="checkbox" checked={smartDateEnabled} onChange={e=>setSmartDateEnabled(e.target.checked)} style={{width:'16px', height:'16px'}} />
+                Definir data de vencimento
+              </label>
+              {smartDateEnabled && (
+                <input type="date" className="modern-input" style={{marginTop:'8px', marginBottom:'16px'}} value={smartInputDate} onChange={e=>setSmartInputDate(e.target.value)} />
+              )}
               
               {quickActions.length > 0 && (
                 <div style={{display:'flex', gap:'12px', overflowX:'auto', paddingBottom:'8px'}}>
@@ -795,11 +1067,111 @@ export default function App() {
         {/* ANALYTICS TAB */}
         {activeTab === 'analytics' && (
            <div className="content-pad" style={{paddingTop: '20px'}}>
+              {monthProjection && (
+                <div className="glass-card" style={{marginBottom:'16px'}}>
+                  <h3 className="section-title">Projeção do Mês</h3>
+                  <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'12px'}}>
+                    <div>
+                      <div style={{fontSize:'0.8rem', color:'var(--text-muted-dark)'}}>Gasto até agora</div>
+                      <div style={{fontSize:'1.4rem', fontWeight:700}}>{safeFormat(monthProjection.spent)}</div>
+                    </div>
+                    <div style={{textAlign:'right'}}>
+                      <div style={{fontSize:'0.8rem', color:'var(--text-muted-dark)'}}>Projeção final</div>
+                      <div style={{fontSize:'1.4rem', fontWeight:700, color: monthProjection.projected > monthProjection.spent * 1.5 ? 'var(--color-warning)' : 'var(--color-primary)'}}>{safeFormat(monthProjection.projected)}</div>
+                    </div>
+                  </div>
+                  <div className="budget-bar-bg">
+                    <div className="budget-bar-fill" style={{width: `${Math.min(monthProjection.progress, 100)}%`, background: monthProjection.progress > 75 ? 'var(--color-warning)' : 'var(--color-primary)'}}></div>
+                  </div>
+                  <div style={{fontSize:'0.7rem', color:'var(--text-muted-dark)', marginTop:'6px', textAlign:'center'}}>{monthProjection.progress.toFixed(0)}% do mês passedo</div>
+                </div>
+              )}
+
+              {monthlyComparison && (
+                <div className="glass-card" style={{marginBottom:'16px'}}>
+                  <h3 className="section-title">Comparativo com Mês Anterior</h3>
+                  <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px', marginBottom:'16px'}}>
+                    <div style={{padding:'12px', background:'var(--bg-page-dark)', borderRadius:'12px', textAlign:'center'}}>
+                      <div style={{fontSize:'0.7rem', color:'var(--text-muted-dark)', marginBottom:'4px'}}>Entradas</div>
+                      <div style={{fontSize:'1.1rem', fontWeight:600, color: monthlyComparison.incomeChange >= 0 ? 'var(--color-income)' : 'var(--color-expense)'}}>
+                        {monthlyComparison.incomeChange >= 0 ? '+' : ''}{monthlyComparison.incomeChange.toFixed(1)}%
+                      </div>
+                      <div style={{fontSize:'0.8rem', color:'var(--text-muted-dark)'}}>{safeFormat(monthlyComparison.current.income)}</div>
+                    </div>
+                    <div style={{padding:'12px', background:'var(--bg-page-dark)', borderRadius:'12px', textAlign:'center'}}>
+                      <div style={{fontSize:'0.7rem', color:'var(--text-muted-dark)', marginBottom:'4px'}}>Saídas</div>
+                      <div style={{fontSize:'1.1rem', fontWeight:600, color: monthlyComparison.expenseChange <= 0 ? 'var(--color-income)' : 'var(--color-expense)'}}>
+                        {monthlyComparison.expenseChange >= 0 ? '+' : ''}{monthlyComparison.expenseChange.toFixed(1)}%
+                      </div>
+                      <div style={{fontSize:'0.8rem', color:'var(--text-muted-dark)'}}>{safeFormat(monthlyComparison.current.expense)}</div>
+                    </div>
+                  </div>
+                  <div style={{textAlign:'center', padding:'12px', background:monthlyComparison.balanceChange >= 0 ? 'rgba(18,201,155,0.1)' : 'rgba(255,74,107,0.1)', borderRadius:'12px'}}>
+                    <div style={{fontSize:'0.7rem', color:'var(--text-muted-dark)', marginBottom:'4px'}}>Economia</div>
+                    <div style={{fontSize:'1.2rem', fontWeight:700, color: monthlyComparison.balanceChange >= 0 ? 'var(--color-income)' : 'var(--color-expense)'}}>
+                      {safeFormat(monthlyComparison.current.balance)} ({monthlyComparison.balanceChange >= 0 ? '+' : ''}{monthlyComparison.balanceChange.toFixed(1)}%)
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="glass-card" style={{marginBottom:'16px'}}>
+                <h3 className="section-title">Evolução Patrimonial</h3>
+                <div style={{fontSize:'0.8rem', color:'var(--text-muted-dark)', marginBottom:'16px'}}>Saldo acumulado nos últimos 12 meses</div>
+                {patrimonyEvolution.length > 0 ? (
+                  <div style={{display:'flex', flexDirection:'column', gap:'8px'}}>
+                    {patrimonyEvolution.slice().reverse().map((p, i) => (
+                      <div key={p.month} style={{display:'flex', alignItems:'center', gap:'12px'}}>
+                        <div style={{fontSize:'0.75rem', color:'var(--text-muted-dark)', width:'50px'}}>{getMonthLabel(p.month).split(' ')[0].slice(0,3)}</div>
+                        <div style={{flex:1, height:'24px', background:'var(--bg-page-dark)', borderRadius:'6px', overflow:'hidden', position:'relative'}}>
+                          <div style={{
+                            width: `${Math.min((p.balance / Math.max(...patrimonyEvolution.map(x=>x.balance), 1)) * 100, 100)}%`,
+                            height:'100%',
+                            background: p.balance >= 0 ? 'var(--color-income)' : 'var(--color-expense)',
+                            borderRadius:'6px',
+                            transition:'width 0.5s ease'
+                          }}></div>
+                        </div>
+                        <div style={{fontSize:'0.8rem', fontWeight:600, width:'80px', textAlign:'right', color: p.balance >= 0 ? 'var(--color-income)' : 'var(--color-expense)'}}>{safeFormat(p.balance)}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{textAlign:'center', color:'var(--text-muted-dark)', padding:'20px'}}>Sem dados suficientes</div>
+                )}
+              </div>
+
               <div className="glass-card" style={{minHeight:'60vh'}}>
                  <h3 className="section-title">Comparativo Semestral</h3>
                  <div style={{marginBottom:'24px', fontSize:'0.85rem', color:'var(--text-muted-dark)'}}>Veja o avanço da retração ou ganho de capital nos últimos 6 meses.</div>
                  <ChartBars options={barData.months} dataIncome={barData.inc} dataExpense={barData.exp} />
                  
+                 {categoryTrend.length > 0 && (
+                   <div style={{marginTop:'30px'}}>
+                      <h3 className="section-title">Tendência de Categorias</h3>
+                      <div style={{fontSize:'0.8rem', color:'var(--text-muted-dark)', marginBottom:'16px'}}>Variação nos últimos 3 meses</div>
+                      {categoryTrend.map(t => (
+                        <div key={t.category} style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border-dark)'}}>
+                          <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+                             <div style={{color:t.color}}><SvgIcon name={t.category} size={18}/></div>
+                             <div>
+                               <div style={{fontWeight:500, fontSize:'0.9rem'}}>{t.label}</div>
+                               <div style={{fontSize:'0.7rem', color:'var(--text-muted-dark)'}}>{safeFormat(t.first)} → {safeFormat(t.last)}</div>
+                             </div>
+                          </div>
+                          <div style={{
+                            fontWeight:600, 
+                            color: t.change <= 0 ? 'var(--color-income)' : 'var(--color-expense)',
+                            background: t.change <= 0 ? 'rgba(18,201,155,0.1)' : 'rgba(255,74,107,0.1)',
+                            padding:'4px 10px', borderRadius:'8px', fontSize:'0.85rem'
+                          }}>
+                            {t.change >= 0 ? '+' : ''}{t.change.toFixed(1)}%
+                          </div>
+                        </div>
+                      ))}
+                   </div>
+                 )}
+
                  <div style={{marginTop:'30px'}}>
                     <h3 className="section-title">Maiores Destinos</h3>
                     {[...donutData].sort((a,b)=>b.value-a.value).map((d,i) => (
@@ -822,28 +1194,73 @@ export default function App() {
             <div className="glass-card" style={{minHeight:'60vh'}}>
               <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px'}}>
                  <h3 className="section-title" style={{margin:0}}>Suas Carteiras</h3>
-                 <span style={{fontSize:'0.75rem', color:'var(--color-primary)', fontWeight:600}}>Total: {safeFormat(totalBal)}</span>
+                 <button 
+                  style={{
+                    padding:'6px 12px', fontSize:'0.7rem', borderRadius:'10px', border:'none', 
+                    background: 'var(--color-primary)', color: 'white', cursor:'pointer', fontWeight:600
+                  }}
+                  onClick={() => setShowAddAccount(true)}
+                 >+ Adicionar</button>
               </div>
               <div style={{display:'flex', flexDirection:'column', gap:'12px'}}>
                 {accounts.map(acc => (
                   <div key={acc.id} style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px', borderRadius:'20px', border:'1px solid var(--border-dark)', background:'var(--bg-surface-hover)'}}>
                     <div style={{display:'flex', alignItems:'center', gap:'14px'}}>
-                       <div style={{width:'44px', height:'44px', borderRadius:'14px', background:`${acc.color}20`, color:acc.color, display:'flex', justifyContent:'center', alignItems:'center'}}><SvgIcon name="wallet" size={20} /></div>
-                       <div style={{fontSize:'0.95rem', fontWeight:600, color:'var(--text-main-dark)'}}>{acc.name}</div>
+                       <div style={{width:'44px', height:'44px', borderRadius:'14px', background:`${acc.color}20`, color:acc.color, display:'flex', justifyContent:'center', alignItems:'center'}}><SvgIcon name={acc.type === 'income' ? 'investimento' : 'wallet'} size={20} /></div>
+                       <div>
+                         <div style={{fontSize:'0.95rem', fontWeight:600, color:'var(--text-main-dark)'}}>{acc.name}</div>
+                         {acc.type === 'credit' && accountLimits[acc.id] > 0 && (
+                           <div style={{fontSize:'0.7rem', color:'var(--text-muted-dark)'}}>
+                             Limite: {safeFormat(accountLimits[acc.id])} • Fech: dia {accountClosingDays[acc.id] || 0}
+                           </div>
+                         )}
+                         {acc.type === 'income' && (
+                           <div style={{fontSize:'0.7rem', color:'var(--color-income)'}}>Apenas receitas</div>
+                         )}
+                         {acc.type === 'default' && (
+                           <div style={{fontSize:'0.7rem', color:'var(--text-muted-dark)'}}>Padrão</div>
+                         )}
+                       </div>
                     </div>
-                    <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+                    <div style={{display:'flex', alignItems:'center', gap:'4px'}}>
                       <button 
                         style={{
-                          padding:'8px 12px', fontSize:'0.7rem', borderRadius:'10px', border:'none', 
+                          padding:'6px 8px', fontSize:'0.6rem', borderRadius:'8px', border:'none', 
+                          background: 'var(--bg-surface-dark)',
+                          color: 'var(--text-muted-dark)',
+                          cursor:'pointer', fontWeight:500
+                        }}
+                        onClick={() => setSelectedAccountFilter(selectedAccountFilter === acc.id + '_edit' ? null : acc.id + '_edit')}
+                        title="Editar"
+                      >
+                        ✏️
+                      </button>
+                      {acc.type !== 'default' && (
+                        <button 
+                          style={{
+                            padding:'6px 8px', fontSize:'0.6rem', borderRadius:'8px', border:'none', 
+                            background: 'rgba(255,74,107,0.1)',
+                            color: 'var(--color-expense)',
+                            cursor:'pointer', fontWeight:500
+                          }}
+                          onClick={() => setDeleteConfirmAccount(acc.id)}
+                          title="Excluir"
+                        >
+                          🗑️
+                        </button>
+                      )}
+                      <button 
+                        style={{
+                          padding:'6px 10px', fontSize:'0.65rem', borderRadius:'8px', border:'none', 
                           background: selectedAccountFilter === acc.id ? 'var(--color-primary)' : 'var(--bg-surface-dark)',
                           color: selectedAccountFilter === acc.id ? 'white' : 'var(--text-muted-dark)',
                           cursor:'pointer', fontWeight:500
                         }}
                         onClick={() => setSelectedAccountFilter(selectedAccountFilter === acc.id ? null : acc.id)}
                       >
-                        {selectedAccountFilter === acc.id ? 'Fechar' : 'Ver Movs'}
+                        {selectedAccountFilter === acc.id ? '✕' : 'Ver'}
                       </button>
-                      <div style={{fontSize:'1.1rem', fontWeight:700, color: (accountBalances[acc.id]||0) < 0 ? 'var(--color-expense)' : 'var(--text-main-dark)'}}>
+                      <div style={{fontSize:'1rem', fontWeight:700, color: (accountBalances[acc.id]||0) < 0 ? 'var(--color-expense)' : 'var(--text-main-dark)', minWidth:'70px', textAlign:'right'}}>
                          {safeFormat(accountBalances[acc.id] || 0)}
                       </div>
                     </div>
@@ -851,14 +1268,148 @@ export default function App() {
                 ))}
               </div>
             </div>
-            {selectedAccountFilter && (
+
+            {selectedAccountFilter && selectedAccountFilter.endsWith('_config') && (
+              <div className="glass-card" style={{marginTop:'16px'}}>
+                <h3 className="section-title">Configurar {accounts.find(a => a.id === selectedAccountFilter.replace('_config',''))?.name}</h3>
+                <div style={{marginBottom:'16px'}}>
+                  <label style={{fontSize:'0.85rem', color:'var(--text-muted-dark)', display:'block', marginBottom:'8px'}}>Limite total do cartão</label>
+                  <input 
+                    type="number" 
+                    className="modern-input" 
+                    placeholder="Ex: 5000" 
+                    value={accountLimits[selectedAccountFilter.replace('_config','')] || ''}
+                    onChange={e => {
+                      const v = parseFloat(e.target.value) || 0;
+                      const accId = selectedAccountFilter.replace('_config','');
+                      const nl = {...accountLimits, [accId]: v};
+                      setAccountLimits(nl);
+                      localStorage.setItem('financeAccountLimits', JSON.stringify(nl));
+                    }}
+                  />
+                </div>
+                <div style={{marginBottom:'16px'}}>
+                  <label style={{fontSize:'0.85rem', color:'var(--text-muted-dark)', display:'block', marginBottom:'8px'}}>Dia de fechamento da fatura</label>
+                  <input 
+                    type="number" 
+                    className="modern-input" 
+                    placeholder="Ex: 15" 
+                    min="1" max="31"
+                    value={accountClosingDays[selectedAccountFilter.replace('_config','')] || ''}
+                    onChange={e => {
+                      const v = parseInt(e.target.value) || 0;
+                      const accId = selectedAccountFilter.replace('_config','');
+                      const nc = {...accountClosingDays, [accId]: v};
+                      setAccountClosingDays(nc);
+                      localStorage.setItem('financeAccountClosingDays', JSON.stringify(nc));
+                    }}
+                  />
+                </div>
+                <div style={{fontSize:'0.8rem', color:'var(--text-muted-dark)'}}>
+                  Configure o limite e o dia de fechamento para ver a fatura atual e projeção de uso.
+                </div>
+              </div>
+            )}
+
+            {selectedAccountFilter && selectedAccountFilter.endsWith('_edit') && (() => {
+              const accId = selectedAccountFilter.replace('_edit','');
+              const acc = accounts.find(a => a.id === accId);
+              return (
+                <div className="glass-card" style={{marginTop:'16px'}}>
+                  <h3 className="section-title">Editar {acc?.name}</h3>
+                  <div style={{marginBottom:'16px'}}>
+                    <label style={{fontSize:'0.85rem', color:'var(--text-muted-dark)', display:'block', marginBottom:'8px'}}>Nome</label>
+                    <input 
+                      type="text" 
+                      className="modern-input" 
+                      placeholder="Nome da conta"
+                      defaultValue={acc?.name}
+                      id={`edit-name-${accId}`}
+                    />
+                  </div>
+                  <div style={{marginBottom:'16px'}}>
+                    <label style={{fontSize:'0.85rem', color:'var(--text-muted-dark)', display:'block', marginBottom:'8px'}}>Cor</label>
+                    <div style={{display:'flex', gap:'8px', flexWrap:'wrap'}} id={`edit-color-${accId}`}>
+                      {['#5944FF', '#8A05BE', '#12C99B', '#FF7A59', '#FFB142', '#0097E6', '#B33771', '#FFD93D'].map(c => (
+                        <div 
+                          key={c}
+                          onClick={() => {
+                            const nameInput = document.getElementById(`edit-name-${accId}`).value;
+                            const newColor = c;
+                            handleEditAccount(accId, nameInput || acc?.name, newColor);
+                            setSelectedAccountFilter(null);
+                          }}
+                          style={{
+                            width:'32px', height:'32px', borderRadius:'8px', background:c, 
+                            cursor:'pointer', border: acc?.color === c ? '3px solid white' : 'none'
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <button 
+                    style={{background:'var(--color-primary)', color:'white', border:'none', padding:'12px', borderRadius:'12px', width:'100%', fontWeight:600, cursor:'pointer'}}
+                    onClick={() => {
+                      const nameInput = document.getElementById(`edit-name-${accId}`).value;
+                      handleEditAccount(accId, nameInput || acc?.name, acc?.color);
+                      setSelectedAccountFilter(null);
+                    }}
+                  >
+                    Salvar
+                  </button>
+                </div>
+              );
+            })()}
+
+            {selectedAccountFilter && selectedAccountFilter.endsWith('_config') && cardStatementData && (
+              <div className="glass-card" style={{marginTop:'16px'}}>
+                <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'16px'}}>
+                  <h3 className="section-title" style={{margin:0}}>Fatura Atual</h3>
+                  <span style={{fontSize:'0.7rem', color:'var(--color-primary)', cursor:'pointer'}} onClick={() => setSelectedAccountFilter(null)}>Fechar</span>
+                </div>
+                <div style={{fontSize:'0.75rem', color:'var(--text-muted-dark)', marginBottom:'12px'}}>
+                  Período: {cardStatementData.startStr.split('-').reverse().join('/')} a {cardStatementData.endStr.split('-').reverse().join('/')}
+                </div>
+                
+                {cardStatementData.limit > 0 && (
+                  <div style={{marginBottom:'16px', padding:'12px', background:'var(--bg-page-dark)', borderRadius:'12px'}}>
+                    <div style={{display:'flex', justifyContent:'space-between', marginBottom:'8px'}}>
+                      <span style={{fontSize:'0.8rem', color:'var(--text-muted-dark)'}}>Limite disponível</span>
+                      <span style={{fontSize:'0.9rem', fontWeight:600, color:'var(--color-primary)'}}>{safeFormat(cardStatementData.limit - cardStatementData.total)}</span>
+                    </div>
+                    <div className="budget-bar-bg">
+                      <div className="budget-bar-fill" style={{
+                        width: `${Math.min((cardStatementData.total / cardStatementData.limit) * 100, 100)}%`,
+                        background: (cardStatementData.total / cardStatementData.limit) > 0.9 ? 'var(--color-expense)' : (cardStatementData.total / cardStatementData.limit) > 0.7 ? 'var(--color-warning)' : 'var(--color-primary)'
+                      }}></div>
+                    </div>
+                    <div style={{display:'flex', justifyContent:'space-between', marginTop:'8px', fontSize:'0.7rem', color:'var(--text-muted-dark)'}}>
+                      <span>{safeFormat(cardStatementData.total)} usado</span>
+                      <span>{safeFormat(cardStatementData.limit)} limite</span>
+                    </div>
+                  </div>
+                )}
+
+                {cardStatementData.transactions.length > 0 ? (
+                  cardStatementData.transactions.map(tx => (
+                    <ItemTx key={tx.id} tx={tx} onDelete={handleDelete} onEdit={openEdit} safeFormat={safeFormat} showDate={showDateOnExpense} />
+                  ))
+                ) : (
+                  <div style={{textAlign:'center', padding:'20px', color:'var(--text-muted-dark)', fontSize:'0.85rem'}}>
+                    Nenhum movimento neste período.
+                  </div>
+                )}
+              </div>
+            )}
+
+            {selectedAccountFilter && selectedAccountFilter !== 'acc_card_config' && !cardStatementData && (
               <div className="glass-card" style={{marginTop:'16px'}}>
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'16px'}}>
                   <h3 className="section-title" style={{margin:0}}>Movimentos de {accounts.find(a => a.id === selectedAccountFilter)?.name}</h3>
                   <span style={{fontSize:'0.7rem', color:'var(--color-primary)', cursor:'pointer'}} onClick={() => setSelectedAccountFilter(null)}>Fechar</span>
                 </div>
                 {monthData.filter(t => t.accountId === selectedAccountFilter).map(tx => (
-                  <ItemTx key={tx.id} tx={tx} onDelete={handleDelete} onEdit={openEdit} safeFormat={safeFormat} />
+                  <ItemTx key={tx.id} tx={tx} onDelete={handleDelete} onEdit={openEdit} safeFormat={safeFormat} showDate={showDateOnExpense} />
                 ))}
                 {monthData.filter(t => t.accountId === selectedAccountFilter).length === 0 && (
                   <div style={{textAlign:'center', padding:'20px', color:'var(--text-muted-dark)', fontSize:'0.85rem'}}>
@@ -883,7 +1434,7 @@ export default function App() {
 
              <div className="glass-card" style={{minHeight:'60vh'}}>
                 <h3 className="section-title">Resultados de {getMonthLabel(selectedMonth)}</h3>
-                {monthData.map(tx => <ItemTx key={tx.id} tx={tx} onDelete={handleDelete} onEdit={openEdit} safeFormat={safeFormat} />)}
+                {monthData.map(tx => <ItemTx key={tx.id} tx={tx} onDelete={handleDelete} onEdit={openEdit} safeFormat={safeFormat} showDate={showDateOnExpense} />)}
                 {monthData.length === 0 && (
                   <div style={{display:'flex', flexDirection:'column', alignItems:'center', marginTop:'50px', color:'var(--text-muted-dark)'}}>
                     <SvgIcon name="search" size={48} />
@@ -897,6 +1448,46 @@ export default function App() {
         {/* CONFIG TAB */}
         {activeTab === 'config' && (
           <div className="content-pad" style={{paddingTop: '20px'}}>
+            <div className="glass-card">
+              <h3 className="section-title">Exibição</h3>
+              <div className="setting-row">
+                <div style={{fontSize:'0.9rem'}}>Mostrar Seletor de Mês</div>
+                <button 
+                  style={{
+                    width:'50px', height:'28px', borderRadius:'14px', border:'none', 
+                    background: showMonthPicker ? 'var(--color-primary)' : 'var(--bg-surface-dark)',
+                    color: showMonthPicker ? 'white' : 'var(--text-muted-dark)',
+                    cursor:'pointer', fontWeight:600, fontSize:'0.8rem'
+                  }}
+                  onClick={() => {
+                    const v = !showMonthPicker;
+                    setShowMonthPicker(v);
+                    localStorage.setItem('financeShowMonthPicker', v.toString());
+                  }}
+                >
+                  {showMonthPicker ? 'Sim' : 'Não'}
+                </button>
+              </div>
+              <div className="setting-row">
+                <div style={{fontSize:'0.9rem'}}>Mostrar Data nas Despesas</div>
+                <button 
+                  style={{
+                    width:'50px', height:'28px', borderRadius:'14px', border:'none', 
+                    background: showDateOnExpense ? 'var(--color-primary)' : 'var(--bg-surface-dark)',
+                    color: showDateOnExpense ? 'white' : 'var(--text-muted-dark)',
+                    cursor:'pointer', fontWeight:600, fontSize:'0.8rem'
+                  }}
+                  onClick={() => {
+                    const v = !showDateOnExpense;
+                    setShowDateOnExpense(v);
+                    localStorage.setItem('financeShowDateOnExpense', v.toString());
+                  }}
+                >
+                  {showDateOnExpense ? 'Sim' : 'Não'}
+                </button>
+              </div>
+            </div>
+
             <div className="glass-card">
               <h3 className="section-title">Metas de Gastos</h3>
               <div style={{fontSize:'0.85rem', color:'var(--text-muted-dark)', marginBottom:'16px'}}>Defina limites para ser alertado. Deixe em 0 para remover a meta.</div>
@@ -1007,6 +1598,99 @@ export default function App() {
 
         {/* BOTTOM SHEET ROOT */}
         {sheetOpen && <BottomSheet initialData={editTx} accounts={accounts} onClose={()=>setSheetOpen(false)} onSave={handleSaveTx} />}
+
+        {/* ADD ACCOUNT MODAL */}
+        {showAddAccount && (
+          <div className="name-modal-overlay" onClick={() => setShowAddAccount(false)}>
+            <div className="name-modal" onClick={e => e.stopPropagation()}>
+              <h2>Nova Conta</h2>
+              <p>Adicione uma nova carteira ou cartão</p>
+              
+              <input 
+                type="text" 
+                className="modern-input" 
+                placeholder="Nome (ex: Nubank, Iti)" 
+                value={newAccountName}
+                onChange={e => setNewAccountName(e.target.value)}
+              />
+              
+              <div style={{marginBottom:'16px'}}>
+                <label style={{fontSize:'0.85rem', color:'var(--text-muted-dark)', display:'block', marginBottom:'8px'}}>Tipo de conta</label>
+                <div style={{display:'flex', gap:'8px'}}>
+                  <button 
+                    style={{
+                      flex:1, padding:'10px', borderRadius:'12px', border:'none', 
+                      background: newAccountType === 'default' ? 'var(--color-primary)' : 'var(--bg-surface-dark)',
+                      color: newAccountType === 'default' ? 'white' : 'var(--text-muted-dark)',
+                      fontWeight:600, fontSize:'0.8rem', cursor:'pointer'
+                    }}
+                    onClick={() => setNewAccountType('default')}
+                  >Padrão</button>
+                  <button 
+                    style={{
+                      flex:1, padding:'10px', borderRadius:'12px', border:'none', 
+                      background: newAccountType === 'credit' ? '#8A05BE' : 'var(--bg-surface-dark)',
+                      color: newAccountType === 'credit' ? 'white' : 'var(--text-muted-dark)',
+                      fontWeight:600, fontSize:'0.8rem', cursor:'pointer'
+                    }}
+                    onClick={() => setNewAccountType('credit')}
+                  >Cartão</button>
+                  <button 
+                    style={{
+                      flex:1, padding:'10px', borderRadius:'12px', border:'none', 
+                      background: newAccountType === 'income' ? '#FFD93D' : 'var(--bg-surface-dark)',
+                      color: newAccountType === 'income' ? 'black' : 'var(--text-muted-dark)',
+                      fontWeight:600, fontSize:'0.8rem', cursor:'pointer'
+                    }}
+                    onClick={() => setNewAccountType('income')}
+                  >Receita</button>
+                </div>
+              </div>
+
+              {newAccountType === 'credit' && (
+                <>
+                  <input 
+                    type="number" 
+                    className="modern-input" 
+                    placeholder="Limite do cartão (opcional)" 
+                    value={newAccountLimit}
+                    onChange={e => setNewAccountLimit(e.target.value)}
+                  />
+                  <input 
+                    type="number" 
+                    className="modern-input" 
+                    placeholder="Dia de fechamento da fatura (ex: 15)" 
+                    min="1" max="31"
+                    value={newAccountClosingDay}
+                    onChange={e => setNewAccountClosingDay(e.target.value)}
+                  />
+                </>
+              )}
+              
+              <div style={{marginBottom:'16px'}}>
+                <label style={{fontSize:'0.85rem', color:'var(--text-muted-dark)', display:'block', marginBottom:'8px'}}>Cor</label>
+                <div style={{display:'flex', gap:'8px', flexWrap:'wrap'}}>
+                  {['#5944FF', '#8A05BE', '#12C99B', '#FF7A59', '#FFB142', '#0097E6', '#B33771', '#FFD93D'].map(c => (
+                    <div 
+                      key={c}
+                      onClick={() => setNewAccountColor(c)}
+                      style={{
+                        width:'32px', height:'32px', borderRadius:'8px', background:c, 
+                        cursor:'pointer', border: newAccountColor === c ? '3px solid white' : 'none'
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <button className="btn-submit" onClick={handleAddAccount}>Adicionar Conta</button>
+              <button 
+                style={{width:'100%', background:'transparent', border:'none', color:'var(--text-muted-dark)', marginTop:'12px', cursor:'pointer'}}
+                onClick={() => setShowAddAccount(false)}
+              >Cancelar</button>
+            </div>
+          </div>
+        )}
 
         {/* NAME MODAL */}
         {showNameModal && (
