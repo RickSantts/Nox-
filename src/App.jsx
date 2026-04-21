@@ -66,25 +66,26 @@ const getMonthLabel = (dateStr) => {
   const [year, month] = dateStr.split('-');
   const date = new Date(year, parseInt(month) - 1, 1);
   const m = date.toLocaleDateString('pt-BR', { month: 'long' });
-  return m.charAt(0).toUpperCase() + m.slice(1) + ' ' + year;
+  const label = m.charAt(0).toUpperCase() + m.slice(1) + ' ' + year;
+  return dateStr > getCurrentMonthStr() ? `${label} (Projeção)` : label;
 };
 const getCurrentMonthStr = () => new Date().toISOString().substring(0, 7);
 
 // --- ESTILIZAÇÃO NEUMORPHISM/MODERNA (V2) ---
 const globalStyle = `
   :root {
-    --bg-page-dark: #0D1F1A;
-    --bg-surface-dark: #152E27;
-    --bg-surface-hover: #1E3D35;
-    --border-dark: #2A4D43;
-    --text-main-dark: #FFFFFF;
-    --text-muted-dark: #8AA89E;
+    --bg-page-dark: #060910;
+    --bg-surface-dark: #0F1624;
+    --bg-surface-hover: #172033;
+    --border-dark: #1E293B;
+    --text-main-dark: #F8FAFC;
+    --text-muted-dark: #94A3B8;
     
-    --color-primary: #3DCEA8; 
-    --color-secondary: #7FFFd4;
-    --color-income: #7FFFd4;
-    --color-expense: #FF6B6B; 
-    --color-warning: #FFD93D;
+    --color-primary: #3B82F6; 
+    --color-secondary: #60A5FA;
+    --color-income: #10B981;
+    --color-expense: #EF4444; 
+    --color-warning: #F59E0B;
   }
 
   body, html {
@@ -109,10 +110,19 @@ const globalStyle = `
   /* Header */
   .header-area { padding: 16px 12px 10px; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
   @media (max-width: 380px) { .header-area { padding: 12px 10px 8px; gap: 6px; } }
-  .header-left { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
+  .header-left { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1; }
   @media (max-width: 360px) { .header-left { gap: 8px; } }
-  .app-logo { height: 36px; width: 36px; objectFit: contain; borderRadius: 10px; flexShrink: 0; }
-  @media (max-width: 360px) { .app-logo { height: 32px !important; width: 32px !important; } }
+  .app-logo { 
+    height: 48px; 
+    width: 48px; 
+    object-fit: contain; 
+    border-radius: 14px; 
+    flex-shrink: 0;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
+    background: white;
+    padding: 2px;
+  }
+  @media (max-width: 360px) { .app-logo { height: 40px !important; width: 40px !important; } }
   .greeting { font-size: 1.1rem; font-weight: 600; color: var(--text-main-dark); display: flex; alignItems: center; gap: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   @media (max-width: 380px) { .greeting { font-size: 0.95rem; } }
   @media (max-width: 360px) { .greeting { font-size: 0.85rem; gap: 4px; } }
@@ -144,6 +154,35 @@ const globalStyle = `
     pointer-events: auto;
   }
   @media (max-width: 360px) { .month-select { padding: 5px 24px 5px 8px; font-size: 0.65rem; border-radius: 10px; } }
+
+  .insight-card {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%);
+    border: 1px solid var(--border-dark);
+    padding: 16px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    animation: popIn 0.5s ease;
+  }
+  .insight-row { display: flex; align-items: center; gap: 12px; }
+  .insight-icon { width: 40px; height: 40px; border-radius: 12px; background: rgba(255,255,255,0.05); display: flex; align-items:center; justify-content:center; }
+  .insight-title { font-size: 0.75rem; color: var(--text-muted-dark); }
+  .insight-val { font-size: 1rem; fontWeight: 600; color: var(--text-main-dark); }
+  
+  .credit-card-modern {
+    background: rgba(255,255,255,0.03);
+    border-radius: 20px;
+    padding: 20px;
+    border: 1px solid var(--border-dark);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .credit-card-modern .insight-title { color: var(--color-primary); font-weight: 600; font-size: 0.9rem; }
+  
+  .tab-content { animation: slideUpFade 0.4s cubic-bezier(0, 0, 0.2, 1); }
 
   /* Content Cards */
   .content-pad { padding: 0 16px; display: flex; flex-direction: column; gap: 16px; animation: popIn 0.4s ease; }
@@ -533,10 +572,20 @@ const [notificationDays, setNotificationDays] = useState(1);
 
   const availableMonths = useMemo(() => {
     if(!isLoaded) return [];
-    if(transactions.length === 0) return [getCurrentMonthStr()];
     const setM = new Set(transactions.map(t => t.date.substring(0, 7)));
+    
+    const now = new Date();
     const current = getCurrentMonthStr();
     setM.add(current);
+    
+    // Adiciona os próximos 12 meses para planejamento futuro
+    for (let i = 1; i <= 12; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      setM.add(`${y}-${m}`);
+    }
+    
     return Array.from(setM).sort().reverse();
   }, [transactions, isLoaded]);
 
@@ -561,6 +610,26 @@ const [notificationDays, setNotificationDays] = useState(1);
       return !isToday && diffDays >= 0 && diffDays <= notificationDays && lastNotis[t.id] !== todayStr;
     });
 
+    // Closing date notifications
+    accounts.forEach(acc => {
+      if (acc.type === 'credit' && accountClosingDays[acc.id]) {
+        const closing = parseInt(accountClosingDays[acc.id]);
+        const day = todayObj.getDate();
+        const diff = closing - day;
+        
+        // Notify if it's nearing closing (2 days before or today)
+        if (diff >= 0 && diff <= 2 && lastNotis[`closing_${acc.id}`] !== todayStr) {
+          const msg = diff === 0 ? `A fatura do ${acc.name} fecha hoje!` : `A fatura do ${acc.name} fecha em ${diff} dias.`;
+          if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+            navigator.serviceWorker.ready.then(reg => reg.showNotification('Fatura fechando!', { body: msg, icon: '/nox_finance_icone.png' }));
+          } else {
+            new Notification('Fatura fechando!', { body: msg, icon: '/nox_finance_icone.png' });
+          }
+          lastNotis[`closing_${acc.id}`] = todayStr;
+        }
+      }
+    });
+
     if (toNotify.length > 0) {
       if ('serviceWorker' in navigator && navigator.serviceWorker.ready) {
         navigator.serviceWorker.ready.then(reg => {
@@ -577,18 +646,19 @@ const [notificationDays, setNotificationDays] = useState(1);
         });
       }
       toNotify.forEach(t => lastNotis[t.id] = todayStr);
-      localStorage.setItem('financeLastNotis', JSON.stringify(lastNotis));
     }
-  }, [isLoaded, transactions, notificationDays]);
+    localStorage.setItem('financeLastNotis', JSON.stringify(lastNotis));
+  }, [isLoaded, transactions, notificationDays, accounts, accountClosingDays]);
 
   useEffect(() => {
+    if (!isLoaded || selectedMonth) return;
     const currentMonth = getCurrentMonthStr();
-    if (availableMonths.length > 0 && availableMonths.includes(currentMonth)) {
+    if (availableMonths.includes(currentMonth)) {
       setSelectedMonth(currentMonth);
-    } else if (availableMonths.length > 0 && !availableMonths.includes(selectedMonth)) {
+    } else if (availableMonths.length > 0) {
       setSelectedMonth(availableMonths[0]);
     }
-  }, [availableMonths, selectedMonth]);
+  }, [isLoaded, availableMonths, selectedMonth]); // Mantido selectedMonth apenas para checagem interna
 
   // Derived Data
   const monthData = useMemo(() => {
@@ -655,12 +725,26 @@ const [notificationDays, setNotificationDays] = useState(1);
   }, [transactions, availableMonths]);
 
   const activeAlerts = useMemo(() => {
-    return Object.keys(budgets).map(catKey => {
+    const alerts = [];
+    // Budget Alerts
+    Object.keys(budgets).forEach(catKey => {
       const limit = budgets[catKey];
       const spent = transactions.filter(t => t.date.startsWith(selectedMonth) && t.category === catKey && t.type === 'saida').reduce((s,t) => s + t.amount, 0);
-      return { catKey, pct: (spent / limit) * 100 };
-    }).filter(a => a.pct >= 85);
-  }, [budgets, transactions, selectedMonth]);
+      const pct = (spent / limit) * 100;
+      if (pct >= 85) alerts.push({ type: 'budget', catKey, pct });
+    });
+    
+    // Credit Limit Alerts
+    accounts.forEach(acc => {
+      if (acc.type === 'credit' && accountLimits[acc.id] > 0) {
+        const bal = Math.abs(accountBalances[acc.id] || 0);
+        const limit = accountLimits[acc.id];
+        if (bal > limit) alerts.push({ type: 'limit', accName: acc.name, bal, limit });
+      }
+    });
+
+    return alerts;
+  }, [budgets, transactions, selectedMonth, accounts, accountBalances, accountLimits]);
 
   const monthProjection = useMemo(() => {
     const current = getCurrentMonthStr();
@@ -999,16 +1083,48 @@ const [notificationDays, setNotificationDays] = useState(1);
 
         {/* DASHBOARD TAB */}
         {activeTab === 'dash' && (
-          <div className="content-pad" style={{paddingTop: '20px'}}>
+          <div className="tab-content content-pad" style={{paddingTop: '20px'}}>
             
             <div className="total-balance-box">
-              <div style={{fontSize:'0.9rem', opacity:0.8}}>Saldo Acumulado</div>
-              <div style={{fontSize:'2.2rem', fontWeight:700}}>{safeFormat(totalBal)}</div>
+              <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
+                <div>
+                  <div style={{fontSize:'0.9rem', opacity:0.8}}>{selectedMonth > getCurrentMonthStr() ? 'Saldo Projetado' : 'Saldo Acumulado'}</div>
+                  <div style={{fontSize:'2.2rem', fontWeight:700}}>{safeFormat(totalBal)}</div>
+                </div>
+                {selectedMonth > getCurrentMonthStr() && (
+                  <div style={{background:'rgba(255,255,255,0.2)', padding:'4px 10px', borderRadius:'100px', fontSize:'0.7rem', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.5px'}}>Projeção</div>
+                )}
+              </div>
             </div>
 
-            {activeAlerts.map(a => (
-              <div key={a.catKey} className="alert-banner" style={{marginTop: '16px', marginBottom: 0}}>
-                <SvgIcon name="alert" size={18}/> Cuidado: Você atingiu {a.pct.toFixed(0)}% da meta de {getCategoryInfo(a.catKey).label}!
+            <div className="insight-card">
+               <div className="insight-row">
+                  <div className="insight-icon" style={{color:'var(--color-primary)'}}><SvgIcon name="chart" size={20}/></div>
+                  <div style={{flex:1}}>
+                     <div className="insight-title">Sobra disponível no mês</div>
+                     <div className="insight-val" style={{color: (monthInc - monthExp) >= 0 ? 'var(--color-income)' : 'var(--color-expense)'}}>
+                        {safeFormat(monthInc - monthExp)}
+                     </div>
+                  </div>
+                  {selectedMonth === getCurrentMonthStr() && (
+                    <div style={{textAlign:'right'}}>
+                       <div className="insight-title">Orçamento Diário</div>
+                       <div className="insight-val" style={{fontSize:'0.9rem'}}>
+                          {safeFormat(Math.max((monthInc - monthExp) / (31 - new Date().getDate() + 1), 0))}
+                       </div>
+                    </div>
+                  )}
+               </div>
+            </div>
+
+            {activeAlerts.map((a, idx) => (
+              <div key={idx} className="alert-banner" style={{marginTop: '16px', marginBottom: 0, background: a.type === 'limit' ? 'rgba(255,74,107,0.1)' : undefined, color: a.type === 'limit' ? 'var(--color-expense)' : undefined}}>
+                <SvgIcon name="alert" size={18}/> 
+                {a.type === 'limit' ? (
+                  `Limite Excedido: O cartão ${a.accName} passou do limite (${safeFormat(a.limit)})!`
+                ) : (
+                  `Cuidado: Você atingiu ${a.pct.toFixed(0)}% da meta de ${getCategoryInfo(a.catKey).label}!`
+                )}
               </div>
             ))}
 
@@ -1087,7 +1203,7 @@ const [notificationDays, setNotificationDays] = useState(1);
 
         {/* ANALYTICS TAB */}
         {activeTab === 'analytics' && (
-           <div className="content-pad" style={{paddingTop: '20px'}}>
+          <div className="tab-content content-pad" style={{paddingTop: '20px'}}>
               {monthProjection && (
                 <div className="glass-card" style={{marginBottom:'16px'}}>
                   <h3 className="section-title">Projeção do Mês</h3>
@@ -1211,7 +1327,7 @@ const [notificationDays, setNotificationDays] = useState(1);
 
         {/* ACCOUNTS TAB */}
         {activeTab === 'accounts' && (
-          <div className="content-pad" style={{paddingTop: '20px'}}>
+          <div className="tab-content content-pad" style={{paddingTop: '20px'}}>
             <div className="glass-card" style={{minHeight:'60vh'}}>
               <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px'}}>
                  <h3 className="section-title" style={{margin:0}}>Suas Carteiras</h3>
@@ -1223,13 +1339,23 @@ const [notificationDays, setNotificationDays] = useState(1);
                   onClick={() => setShowAddAccount(true)}
                  >+ Adicionar</button>
               </div>
-<div style={{display:'flex', flexDirection:'column', gap:'12px'}}>
+              <div style={{display:'flex', flexDirection:'column', gap:'12px'}}>
                 {accounts.map(acc => (
-                  <div key={acc.id} style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px', borderRadius:'16px', border:'1px solid var(--border-dark)', background:'var(--bg-surface-hover)'}}>
+                  <div key={acc.id} style={{
+                    display:'flex', 
+                    alignItems:'center', 
+                    justifyContent:'space-between', 
+                    padding:'12px', 
+                    borderRadius:'16px', 
+                    border: '1px solid var(--border-dark)', 
+                    background: 'var(--bg-surface-hover)',
+                    marginBottom: '12px'
+                  }}>
                     <div style={{display:'flex', alignItems:'center', gap:'10px', minWidth: 0, flex: 1}}>
                        <div style={{width:'36px', height:'36px', borderRadius:'10px', background:`${acc.color}20`, color:acc.color, display:'flex', justifyContent:'center', alignItems:'center', flexShrink: 0}}><SvgIcon name={getAccountIcon(acc)} size={18} /></div>
                        <div style={{minWidth: 0}}>
-                          <div style={{fontSize:'0.85rem', fontWeight:600, color:'var(--text-main-dark)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{acc.name}</div>
+
+                          <div style={{fontSize: '0.85rem', fontWeight:600, color:'var(--text-main-dark)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{acc.name}</div>
                           {acc.type === 'credit' && accountLimits[acc.id] > 0 && (
                             <div style={{fontSize:'0.65rem', color:'var(--text-muted-dark)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>
                               Limite: {safeFormat(accountLimits[acc.id])} • Fech: dia {accountClosingDays[acc.id] || 0}
@@ -1382,7 +1508,7 @@ const [notificationDays, setNotificationDays] = useState(1);
               );
             })()}
 
-            {selectedAccountFilter && selectedAccountFilter.endsWith('_config') && cardStatementData && (
+            {selectedAccountFilter && !selectedAccountFilter.endsWith('_edit') && cardStatementData && (
               <div className="glass-card" style={{marginTop:'16px'}}>
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'16px'}}>
                   <h3 className="section-title" style={{margin:0}}>Fatura Atual</h3>
@@ -1423,7 +1549,7 @@ const [notificationDays, setNotificationDays] = useState(1);
               </div>
             )}
 
-            {selectedAccountFilter && selectedAccountFilter !== 'acc_card_config' && !cardStatementData && (
+            {selectedAccountFilter && !selectedAccountFilter.endsWith('_edit') && !cardStatementData && (
               <div className="glass-card" style={{marginTop:'16px'}}>
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'16px'}}>
                   <h3 className="section-title" style={{margin:0}}>Movimentos de {accounts.find(a => a.id === selectedAccountFilter)?.name}</h3>
@@ -1444,7 +1570,7 @@ const [notificationDays, setNotificationDays] = useState(1);
 
         {/* LIST TAB */}
         {activeTab === 'list' && (
-          <div className="content-pad" style={{paddingTop: '20px'}}>
+          <div className="tab-content content-pad" style={{paddingTop: '20px'}}>
              <input type="text" className="search-input" style={{marginBottom:'12px'}} placeholder="Buscar por descrição ou nome..." value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} />
              
              <div style={{display:'flex', gap:'8px', overflowX:'auto', marginBottom:'20px', paddingBottom:'8px'}}>
@@ -1468,7 +1594,7 @@ const [notificationDays, setNotificationDays] = useState(1);
 
         {/* CONFIG TAB */}
         {activeTab === 'config' && (
-          <div className="content-pad" style={{paddingTop: '20px'}}>
+          <div className="tab-content content-pad" style={{paddingTop: '20px'}}>
             <div className="glass-card">
               <h3 className="section-title">Exibição</h3>
               <div className="setting-row">
