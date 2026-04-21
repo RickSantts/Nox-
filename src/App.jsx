@@ -804,14 +804,33 @@ const [notificationDays, setNotificationDays] = useState(1);
   }, [monthData, selectedMonth]);
 
   const patrimonyEvolution = useMemo(() => {
-    const ms = [...availableMonths].slice(0, 12).reverse();
+    // Pegamos apenas meses que possuem transações REAIS ou o mês atual
+    const monthsWithTx = new Set(transactions.map(t => t.date.substring(0, 7)));
+    const currentM = getCurrentMonthStr();
+    
+    // Filtramos os meses disponíveis para exibir apenas os que têm dados e não são futuros
+    const ms = availableMonths
+      .filter(m => m <= currentM && (monthsWithTx.has(m) || m === currentM))
+      .sort(); // Ordem cronológica para cálculo do saldo acumulado
+      
     let runningBal = 0;
-    return ms.map(m => {
+    const evolution = ms.map(m => {
       const monthTxs = transactions.filter(t => t.date.startsWith(m));
-      monthTxs.forEach(t => runningBal += (t.type === 'entrada' ? t.amount : -t.amount));
+      monthTxs.forEach(t => {
+        const acc = accounts.find(a => a.id === t.accountId);
+        if (acc && acc.type === 'income') {
+          if (t.type === 'entrada') runningBal += t.amount;
+        } else {
+          runningBal += (t.type === 'entrada' ? t.amount : -t.amount);
+        }
+      });
       return { month: m, balance: runningBal };
     });
-  }, [transactions, availableMonths]);
+
+    // Retornamos apenas os que possuem algum valor (para evitar meses vazios no início da lista)
+    return evolution.filter(e => e.balance !== 0 || e.month === currentM);
+  }, [transactions, availableMonths, accounts]);
+
 
   const categoryTrend = useMemo(() => {
     const ms = [...availableMonths].slice(0, 3).reverse();
@@ -856,6 +875,72 @@ const [notificationDays, setNotificationDays] = useState(1);
       balanceChange: prevInc - prevExp !== 0 ? ((currInc - currExp) - (prevInc - prevExp)) / Math.abs(prevInc - prevExp) * 100 : 0
     };
   }, [transactions, availableMonths]);
+
+  const financialInsights = useMemo(() => {
+    const list = [];
+    if (monthlyComparison) {
+      const { expenseChange, incomeChange } = monthlyComparison;
+      
+      if (expenseChange > 10) {
+        list.push({ 
+          type: 'warning', 
+          title: 'Gastos em Alta', 
+          text: `Suas despesas subiram ${expenseChange.toFixed(0)}% comparado ao mês passado. Tente identificar gastos não planejados.`,
+          icon: 'alert'
+        });
+      } else if (expenseChange < -5) {
+        list.push({ 
+          type: 'success', 
+          title: 'Belo Trabalho!', 
+          text: `Você poupou ${Math.abs(expenseChange).toFixed(0)}% a mais que no mês anterior.`,
+          icon: 'investimento'
+        });
+      }
+
+      if (incomeChange > 5) {
+        list.push({
+          type: 'success',
+          title: 'Renda Maior',
+          text: `Sua receita aumentou ${incomeChange.toFixed(0)}% este mês. Ótimo momento para investir!`,
+          icon: 'salario'
+        });
+      }
+    }
+
+    if (monthProjection && monthProjection.projected > monthInc && monthInc > 0) {
+      list.push({
+        type: 'warning',
+        title: 'Alerta de Projeção',
+        text: `Nesse ritmo, você fechará o mês com gastos acima da sua receita.`,
+        icon: 'alert'
+      });
+    }
+
+    if (categoryTrend.length > 0) {
+      const topIncrease = categoryTrend.find(t => t.change > 15);
+      if (topIncrease) {
+        list.push({
+          type: 'info',
+          title: `Foco em ${topIncrease.label}`,
+          text: `Os gastos com ${topIncrease.label} subiram ${topIncrease.change.toFixed(0)}% recentemente.`,
+          icon: topIncrease.category
+        });
+      }
+    }
+
+    const savingsRate = monthInc > 0 ? ((monthInc - monthExp) / monthInc) * 100 : 0;
+    if (savingsRate > 20) {
+      list.push({
+        type: 'success',
+        title: 'Taxa de Economia',
+        text: `Você está guardando ${savingsRate.toFixed(0)}% do que ganha. Excelente nível!`,
+        icon: 'money'
+      });
+    }
+
+    return list;
+  }, [monthlyComparison, monthProjection, categoryTrend, monthInc, monthExp]);
+
 
   const cardStatementData = useMemo(() => {
     if (!selectedAccountFilter) return null;
@@ -1246,123 +1331,217 @@ const [notificationDays, setNotificationDays] = useState(1);
         {/* ANALYTICS TAB */}
         {activeTab === 'analytics' && (
           <div className="tab-content content-pad" style={{paddingTop: '20px'}}>
-              {monthProjection && (
+              
+              {/* Header Didático */}
+              <div style={{marginBottom: '20px'}}>
+                <h3 className="section-title" style={{marginBottom: '4px'}}>Análise de Saúde Financeira</h3>
+                <p style={{fontSize: '0.85rem', color: 'var(--text-muted-dark)'}}>Entenda o comportamento do seu dinheiro de forma simples.</p>
+              </div>
+
+              {/* Insights Dinâmicos */}
+              {financialInsights.length > 0 && (
+                <div style={{display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '16px', marginBottom: '8px'}}>
+                  {financialInsights.map((ins, i) => (
+                    <div key={i} className="glass-card" style={{
+                      minWidth: '260px', 
+                      padding: '16px', 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      gap: '8px', 
+                      border: ins.type === 'warning' ? '1px solid rgba(239, 68, 68, 0.3)' : ins.type === 'success' ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid var(--border-dark)',
+                      background: ins.type === 'warning' ? 'rgba(239, 68, 68, 0.05)' : ins.type === 'success' ? 'rgba(16, 185, 129, 0.05)' : 'var(--bg-surface-dark)'
+                    }}>
+                      <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                        <div style={{color: ins.type === 'warning' ? 'var(--color-expense)' : ins.type === 'success' ? 'var(--color-income)' : 'var(--color-primary)'}}>
+                          <SvgIcon name={ins.icon} size={18} />
+                        </div>
+                        <span style={{fontSize: '0.9rem', fontWeight: 700, color: ins.type === 'warning' ? 'var(--color-expense)' : ins.type === 'success' ? 'var(--color-income)' : 'var(--text-main-dark)'}}>{ins.title}</span>
+                      </div>
+                      <p style={{fontSize: '0.8rem', color: 'var(--text-main-dark)', margin: 0, lineHeight: 1.4}}>{ins.text}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Comparativo de Mês Anterior vs Atual */}
+              {monthlyComparison && (
                 <div className="glass-card" style={{marginBottom:'16px'}}>
-                  <h3 className="section-title">Projeção do Mês</h3>
+                  <h3 className="section-title">Como você está hoje vs Mês Passado</h3>
+                  <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
+                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                      <div>
+                        <div style={{fontSize: '0.8rem', color: 'var(--text-muted-dark)'}}>Entradas</div>
+                        <div style={{fontSize: '1.2rem', fontWeight: 600}}>{safeFormat(monthInc)}</div>
+                      </div>
+                      <div style={{
+                        padding: '4px 8px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600,
+                        background: monthlyComparison.incomeChange >= 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                        color: monthlyComparison.incomeChange >= 0 ? 'var(--color-income)' : 'var(--color-expense)'
+                      }}>
+                        {monthlyComparison.incomeChange >= 0 ? '↑' : '↓'} {Math.abs(monthlyComparison.incomeChange).toFixed(1)}%
+                      </div>
+                      <div style={{textAlign: 'right'}}>
+                        <div style={{fontSize: '0.8rem', color: 'var(--text-muted-dark)'}}>Mês Anterior</div>
+                        <div style={{fontSize: '1rem', color: 'var(--text-muted-dark)'}}>{safeFormat(monthlyComparison.previous.income)}</div>
+                      </div>
+                    </div>
+
+                    <div style={{height: '1px', background: 'var(--border-dark)'}}></div>
+
+                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                      <div>
+                        <div style={{fontSize: '0.8rem', color: 'var(--text-muted-dark)'}}>Saídas</div>
+                        <div style={{fontSize: '1.2rem', fontWeight: 600}}>{safeFormat(monthExp)}</div>
+                      </div>
+                      <div style={{
+                        padding: '4px 8px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600,
+                        background: monthlyComparison.expenseChange <= 5 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                        color: monthlyComparison.expenseChange <= 5 ? 'var(--color-income)' : 'var(--color-expense)'
+                      }}>
+                        {monthlyComparison.expenseChange >= 0 ? '↑' : '↓'} {Math.abs(monthlyComparison.expenseChange).toFixed(1)}%
+                      </div>
+                      <div style={{textAlign: 'right'}}>
+                        <div style={{fontSize: '0.8rem', color: 'var(--text-muted-dark)'}}>Mês Anterior</div>
+                        <div style={{fontSize: '1rem', color: 'var(--text-muted-dark)'}}>{safeFormat(monthlyComparison.previous.expense)}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Projeção do Mês (Somente se for o mês atual) */}
+              {monthProjection && selectedMonth === getCurrentMonthStr() && (
+                <div className="glass-card" style={{marginBottom:'16px', borderLeft: '4px solid var(--color-primary)'}}>
+                  <h3 className="section-title">Onde você vai chegar</h3>
                   <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'12px'}}>
                     <div>
-                      <div style={{fontSize:'0.8rem', color:'var(--text-muted-dark)'}}>Gasto até agora</div>
+                      <div style={{fontSize:'0.8rem', color:'var(--text-muted-dark)'}}>Gasto Real</div>
                       <div style={{fontSize:'1.4rem', fontWeight:700}}>{safeFormat(monthProjection.spent)}</div>
                     </div>
                     <div style={{textAlign:'right'}}>
-                      <div style={{fontSize:'0.8rem', color:'var(--text-muted-dark)'}}>Projeção final</div>
-                      <div style={{fontSize:'1.4rem', fontWeight:700, color: monthProjection.projected > monthProjection.spent * 1.5 ? 'var(--color-warning)' : 'var(--color-primary)'}}>{safeFormat(monthProjection.projected)}</div>
+                      <div style={{fontSize:'0.8rem', color:'var(--text-muted-dark)'}}>Previsão de Final</div>
+                      <div style={{fontSize:'1.4rem', fontWeight:700, color: monthProjection.projected > monthInc ? 'var(--color-expense)' : 'var(--color-income)'}}>{safeFormat(monthProjection.projected)}</div>
                     </div>
                   </div>
                   <div className="budget-bar-bg">
-                    <div className="budget-bar-fill" style={{width: `${Math.min(monthProjection.progress, 100)}%`, background: monthProjection.progress > 75 ? 'var(--color-warning)' : 'var(--color-primary)'}}></div>
+                    <div className="budget-bar-fill" style={{width: `${Math.min(monthProjection.progress, 100)}%`, background: 'var(--color-primary)'}}></div>
                   </div>
-                  <div style={{fontSize:'0.7rem', color:'var(--text-muted-dark)', marginTop:'6px', textAlign:'center'}}>{monthProjection.progress.toFixed(0)}% do mês passedo</div>
-                </div>
-              )}
-
-              {monthlyComparison && (
-                <div className="glass-card" style={{marginBottom:'16px'}}>
-                  <h3 className="section-title">Comparativo com Mês Anterior</h3>
-                  <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px', marginBottom:'16px'}}>
-                    <div style={{padding:'12px', background:'var(--bg-page-dark)', borderRadius:'12px', textAlign:'center'}}>
-                      <div style={{fontSize:'0.7rem', color:'var(--text-muted-dark)', marginBottom:'4px'}}>Entradas</div>
-                      <div style={{fontSize:'1.1rem', fontWeight:600, color: monthlyComparison.incomeChange >= 0 ? 'var(--color-income)' : 'var(--color-expense)'}}>
-                        {monthlyComparison.incomeChange >= 0 ? '+' : ''}{monthlyComparison.incomeChange.toFixed(1)}%
-                      </div>
-                      <div style={{fontSize:'0.8rem', color:'var(--text-muted-dark)'}}>{safeFormat(monthlyComparison.current.income)}</div>
-                    </div>
-                    <div style={{padding:'12px', background:'var(--bg-page-dark)', borderRadius:'12px', textAlign:'center'}}>
-                      <div style={{fontSize:'0.7rem', color:'var(--text-muted-dark)', marginBottom:'4px'}}>Saídas</div>
-                      <div style={{fontSize:'1.1rem', fontWeight:600, color: monthlyComparison.expenseChange <= 0 ? 'var(--color-income)' : 'var(--color-expense)'}}>
-                        {monthlyComparison.expenseChange >= 0 ? '+' : ''}{monthlyComparison.expenseChange.toFixed(1)}%
-                      </div>
-                      <div style={{fontSize:'0.8rem', color:'var(--text-muted-dark)'}}>{safeFormat(monthlyComparison.current.expense)}</div>
-                    </div>
-                  </div>
-                  <div style={{textAlign:'center', padding:'12px', background:monthlyComparison.balanceChange >= 0 ? 'rgba(18,201,155,0.1)' : 'rgba(255,74,107,0.1)', borderRadius:'12px'}}>
-                    <div style={{fontSize:'0.7rem', color:'var(--text-muted-dark)', marginBottom:'4px'}}>Economia</div>
-                    <div style={{fontSize:'1.2rem', fontWeight:700, color: monthlyComparison.balanceChange >= 0 ? 'var(--color-income)' : 'var(--color-expense)'}}>
-                      {safeFormat(monthlyComparison.current.balance)} ({monthlyComparison.balanceChange >= 0 ? '+' : ''}{monthlyComparison.balanceChange.toFixed(1)}%)
-                    </div>
+                  <div style={{fontSize:'0.75rem', color:'var(--text-muted-dark)', marginTop:'8px', textAlign:'center'}}>
+                    {monthProjection.progress < 50 ? 'O mês está apenas começando! Mantenha o foco.' : monthProjection.progress > 90 ? 'Mês quase no fim. Como estão as metas?' : 'Você já percorreu ' + monthProjection.progress.toFixed(0) + '% do mês.'}
                   </div>
                 </div>
               )}
 
+              {/* Evolução Patrimonial Gráfica */}
               <div className="glass-card" style={{marginBottom:'16px'}}>
-                <h3 className="section-title">Evolução Patrimonial</h3>
-                <div style={{fontSize:'0.8rem', color:'var(--text-muted-dark)', marginBottom:'16px'}}>Saldo acumulado nos últimos 12 meses</div>
-                {patrimonyEvolution.length > 0 ? (
-                  <div style={{display:'flex', flexDirection:'column', gap:'8px'}}>
-                    {patrimonyEvolution.slice().reverse().map((p, i) => (
-                      <div key={p.month} style={{display:'flex', alignItems:'center', gap:'12px'}}>
-                        <div style={{fontSize:'0.75rem', color:'var(--text-muted-dark)', width:'50px'}}>{getMonthLabel(p.month).split(' ')[0].slice(0,3)}</div>
-                        <div style={{flex:1, height:'24px', background:'var(--bg-page-dark)', borderRadius:'6px', overflow:'hidden', position:'relative'}}>
-                          <div style={{
-                            width: `${Math.min((p.balance / Math.max(...patrimonyEvolution.map(x=>x.balance), 1)) * 100, 100)}%`,
-                            height:'100%',
-                            background: p.balance >= 0 ? 'var(--color-income)' : 'var(--color-expense)',
-                            borderRadius:'6px',
-                            transition:'width 0.5s ease'
-                          }}></div>
+                <h3 className="section-title">Acúmulo de Capital</h3>
+                <p style={{fontSize:'0.8rem', color:'var(--text-muted-dark)', marginBottom:'20px'}}>
+                  Este gráfico mostra o total de dinheiro que você possui em todas as contas somadas ao final de cada mês.
+                </p>
+                
+                {patrimonyEvolution.length > 1 ? (
+                  <div style={{display:'flex', flexDirection:'column', gap:'12px'}}>
+                    {patrimonyEvolution.slice().reverse().slice(0, 6).map((p, i) => {
+                      const maxAbs = Math.max(...patrimonyEvolution.map(x=>Math.abs(x.balance)), 1);
+                      const pct = Math.abs((p.balance / maxAbs) * 100);
+                      const isCurrent = p.month === getCurrentMonthStr();
+                      
+                      return (
+                        <div key={p.month} style={{display:'flex', flexDirection:'column', gap:'4px', opacity: isCurrent ? 1 : 0.7}}>
+                          <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-end'}}>
+                            <span style={{fontSize:'0.8rem', fontWeight: 600, color: isCurrent ? 'var(--color-primary)' : 'var(--text-main-dark)'}}>
+                              {getMonthLabel(p.month).split(' ')[0]} {isCurrent ? '(Hoje)' : ''}
+                            </span>
+                            <span style={{fontSize:'0.85rem', fontWeight:700, color: p.balance >= 0 ? 'var(--color-income)' : 'var(--color-expense)'}}>
+                              {safeFormat(p.balance)}
+                            </span>
+                          </div>
+                          <div className="budget-bar-bg" style={{height: '11px', background: 'rgba(255,255,255,0.05)'}}>
+                            <div className="budget-bar-fill" style={{
+                              width: `${pct}%`,
+                              background: p.balance >= 0 
+                                ? (isCurrent ? 'var(--color-primary)' : 'var(--color-income)') 
+                                : 'var(--color-expense)',
+                              borderRadius:'6px',
+                              boxShadow: isCurrent ? '0 0 10px rgba(59, 130, 246, 0.3)' : 'none'
+                            }}></div>
+                          </div>
                         </div>
-                        <div style={{fontSize:'0.8rem', fontWeight:600, width:'80px', textAlign:'right', color: p.balance >= 0 ? 'var(--color-income)' : 'var(--color-expense)'}}>{safeFormat(p.balance)}</div>
-                      </div>
-                    ))}
+                      );
+                    })}
+                  </div>
+                ) : patrimonyEvolution.length === 1 ? (
+                  <div style={{padding: '24px', textAlign: 'center', background: 'rgba(59,130,246,0.05)', borderRadius: '20px', border: '1px solid var(--border-dark)'}}>
+                    <div style={{color: 'var(--color-primary)', marginBottom: '12px'}}><SvgIcon name="investimento" size={40} /></div>
+                    <h4 style={{fontSize: '1rem', color: 'var(--text-main-dark)', marginBottom: '8px'}}>Sua jornada começou!</h4>
+                    <p style={{fontSize: '0.8rem', color: 'var(--text-muted-dark)', margin: 0, lineHeight: 1.5}}>
+                      Você já tem **{safeFormat(patrimonyEvolution[0].balance)}** acumulados este mês. Continue registrando para ver seu gráfico de crescimento nos próximos meses!
+                    </p>
                   </div>
                 ) : (
-                  <div style={{textAlign:'center', color:'var(--text-muted-dark)', padding:'20px'}}>Sem dados suficientes</div>
+                  <div style={{textAlign:'center', color:'var(--text-muted-dark)', padding:'20px'}}>
+                    Registre sua primeira transação para ver sua evolução.
+                  </div>
                 )}
               </div>
 
-              <div className="glass-card" style={{minHeight:'60vh'}}>
-                 <h3 className="section-title">Comparativo Semestral</h3>
-                 <div style={{marginBottom:'24px', fontSize:'0.85rem', color:'var(--text-muted-dark)'}}>Veja o avanço da retração ou ganho de capital nos últimos 6 meses.</div>
-                 <ChartBars options={barData.months} dataIncome={barData.inc} dataExpense={barData.exp} />
+
+              {/* Tendências e Top Categorias */}
+              <div className="glass-card">
+                 <h3 className="section-title">Hábitos de Consumo</h3>
                  
-                 {categoryTrend.length > 0 && (
+                 <div style={{marginBottom: '20px'}}>
+                   <ChartDonut data={donutData} safeFormat={safeFormat} />
+                 </div>
+
+                 {categoryTrend.length > 0 ? (
                    <div style={{marginTop:'30px'}}>
-                      <h3 className="section-title">Tendência de Categorias</h3>
-                      <div style={{fontSize:'0.8rem', color:'var(--text-muted-dark)', marginBottom:'16px'}}>Variação nos últimos 3 meses</div>
-                      {categoryTrend.map(t => (
-                        <div key={t.category} style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border-dark)'}}>
-                          <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
-                             <div style={{color:t.color}}><SvgIcon name={t.category} size={18}/></div>
-                             <div>
-                               <div style={{fontWeight:500, fontSize:'0.9rem'}}>{t.label}</div>
-                               <div style={{fontSize:'0.7rem', color:'var(--text-muted-dark)'}}>{safeFormat(t.first)} → {safeFormat(t.last)}</div>
-                             </div>
+                      <h4 style={{fontSize:'0.9rem', color:'var(--text-muted-dark)', marginBottom:'16px', fontWeight:600}}>Tendência de Mudança</h4>
+                      <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                        {categoryTrend.slice(0, 4).map(t => (
+                          <div key={t.category} style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px', background: 'var(--bg-page-dark)', borderRadius: '14px'}}>
+                            <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+                               <div style={{width: '32px', height: '32px', borderRadius: '10px', background: `${t.color}20`, color:t.color, display: 'flex', justifyContent: 'center', alignItems: 'center'}}><SvgIcon name={t.category} size={16}/></div>
+                               <div>
+                                 <div style={{fontWeight:600, fontSize:'0.85rem'}}>{t.label}</div>
+                                 <div style={{fontSize:'0.7rem', color:'var(--text-muted-dark)'}}>Mês anterior: {safeFormat(t.first)}</div>
+                               </div>
+                            </div>
+                            <div style={{
+                              fontWeight:700, 
+                              color: t.change <= 0 ? 'var(--color-income)' : 'var(--color-expense)',
+                              fontSize:'0.85rem'
+                            }}>
+                              {t.change >= 0 ? '↑' : '↓'} {Math.abs(t.change).toFixed(0)}%
+                            </div>
                           </div>
-                          <div style={{
-                            fontWeight:600, 
-                            color: t.change <= 0 ? 'var(--color-income)' : 'var(--color-expense)',
-                            background: t.change <= 0 ? 'rgba(18,201,155,0.1)' : 'rgba(255,74,107,0.1)',
-                            padding:'4px 10px', borderRadius:'8px', fontSize:'0.85rem'
-                          }}>
-                            {t.change >= 0 ? '+' : ''}{t.change.toFixed(1)}%
-                          </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                    </div>
+                 ) : (
+                   <p style={{fontSize: '0.8rem', color: 'var(--text-muted-dark)', textAlign: 'center'}}>Ainda não temos dados de meses anteriores para tendências.</p>
                  )}
 
                  <div style={{marginTop:'30px'}}>
-                    <h3 className="section-title">Maiores Destinos</h3>
-                    {[...donutData].sort((a,b)=>b.value-a.value).map((d,i) => (
-                      <div key={d.label} style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 0', borderBottom:'1px solid var(--border-dark)'}}>
+                    <h4 style={{fontSize:'0.9rem', color:'var(--text-muted-dark)', marginBottom:'16px', fontWeight:600}}>Seu Dinheiro foi para:</h4>
+                    {[...donutData].sort((a,b)=>b.value-a.value).slice(0, 5).map((d,i) => (
+                      <div key={d.label} style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 0', borderBottom:'1px solid var(--border-dark)'}}>
                         <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
-                           <div style={{color:d.color}}><SvgIcon name={Object.keys(EXPENSE_CATEGORIES).find(k=>EXPENSE_CATEGORIES[k]?.label===d.label) || 'outros_saida'} size={18}/></div>
-                           <span style={{fontWeight:500, fontSize:'0.9rem'}}>{i+1}º {d.label}</span>
+                           <span style={{fontSize: '0.8rem', color: 'var(--text-muted-dark)', width: '20px'}}>{i+1}º</span>
+                           <span style={{fontWeight:500, fontSize:'0.9rem'}}>{d.label}</span>
                         </div>
-                        <div style={{fontWeight:600}}>{safeFormat(d.value)}</div>
+                        <div style={{fontWeight:600, fontSize: '0.9rem'}}>{safeFormat(d.value)}</div>
                       </div>
                     ))}
                  </div>
+              </div>
+
+              {/* Guia Didático Rápido */}
+              <div style={{margin: '24px 0 40px', padding: '16px', borderRadius: '20px', background: 'rgba(59, 130, 246, 0.1)', border: '1px dashed var(--color-primary)'}}>
+                <h4 style={{fontSize: '0.9rem', color: 'var(--color-primary)', marginBottom: '8px', fontWeight: 700}}>Dica de Gestão</h4>
+                <p style={{fontSize: '0.8rem', color: 'var(--text-main-dark)', margin: 0, lineHeight: 1.5}}>
+                  Tente manter seus gastos fixos (Moradia, Saúde) abaixo de 50% da sua receita total. Use os outros 50% para lazer, investimentos e metas variáveis!
+                </p>
               </div>
            </div>
         )}
