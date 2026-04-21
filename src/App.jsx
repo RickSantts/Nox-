@@ -109,27 +109,56 @@ const globalStyle = `
 
   /* Header */
   .header-area { padding: 16px 12px 10px; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
-  @media (max-width: 380px) { .header-area { padding: 12px 10px 8px; gap: 6px; } }
-  .header-left { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1; }
-  @media (max-width: 360px) { .header-left { gap: 8px; } }
-  .app-logo { 
-    height: 48px; 
-    width: 48px; 
-    object-fit: contain; 
-    border-radius: 14px; 
-    flex-shrink: 0;
-    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
-    background: white;
-    padding: 2px;
+  
+  @media (max-width: 480px) {
+    .header-area {
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      padding: 24px 16px 16px;
+    }
+    .header-left {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      width: 100%;
+      gap: 12px !important;
+    }
+    .header-right {
+      width: 100%;
+      justify-content: center;
+      gap: 12px !important;
+    }
+    .month-picker-container {
+      flex: 1;
+      justify-content: center;
+    }
+    .month-select {
+      width: 100%;
+      max-width: 200px;
+      text-align: center;
+    }
+    .greeting {
+      justify-content: center;
+    }
   }
-  @media (max-width: 360px) { .app-logo { height: 40px !important; width: 40px !important; } }
-  .greeting { font-size: 1.1rem; font-weight: 600; color: var(--text-main-dark); display: flex; alignItems: center; gap: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  @media (max-width: 380px) { .greeting { font-size: 0.95rem; } }
-  @media (max-width: 360px) { .greeting { font-size: 0.85rem; gap: 4px; } }
-  .subtitle { font-size: 0.75rem; color: var(--text-muted-dark); margin-top: -2px; }
-  @media (max-width: 360px) { .subtitle { font-size: 0.65rem; } }
-  .header-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-  @media (max-width: 360px) { .header-right { gap: 4px; } }
+
+  .header-left { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1; }
+  .app-logo { 
+    height: 60px; 
+    width: 60px; 
+    object-fit: contain; 
+    border-radius: 18px; 
+    flex-shrink: 0;
+    filter: drop-shadow(0 4px 15px rgba(0,0,0,0.4));
+    background: white;
+    padding: 4px;
+    border: 2px solid var(--border-dark);
+  }
+  @media (max-width: 360px) { .app-logo { height: 50px !important; width: 50px !important; } }
+  .greeting { font-size: 1.2rem; font-weight: 600; color: var(--text-main-dark); display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .subtitle { font-size: 0.8rem; color: var(--text-muted-dark); margin-top: 2px; }
+  .header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
   
   /* Balances & Wallets */
   .wallet-slider { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 16px; padding: 0 24px 24px; }
