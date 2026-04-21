@@ -127,21 +127,34 @@ const globalStyle = `
     .header-right {
       width: 100%;
       justify-content: center;
-      gap: 12px !important;
+      position: relative;
+      min-height: 40px;
     }
-    .month-picker-container {
-      flex: 1;
+    .month-picker-wrapper {
+      display: flex;
       justify-content: center;
+      width: 100%;
     }
     .month-select {
-      width: 100%;
-      max-width: 200px;
+      width: auto;
+      min-width: 160px;
       text-align: center;
+    }
+    .config-btn {
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      color: var(--text-muted-dark);
     }
     .greeting {
       justify-content: center;
     }
   }
+
+  .config-btn { cursor: pointer; color: var(--text-muted-dark); }
+  .month-picker-wrapper { display: flex; align-items: center; }
 
   .header-left { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1; }
   .app-logo { 
@@ -1098,13 +1111,13 @@ const [notificationDays, setNotificationDays] = useState(1);
           </div>
           <div className="header-right">
             {showMonthPicker && (
-              <div className="month-picker-container" style={{padding:0, margin:0}}>
+              <div className="month-picker-wrapper">
                 <select className="month-select" value={selectedMonth} onChange={e=>setSelectedMonth(e.target.value)}>
                   {availableMonths.map(m => <option key={m} value={m}>{getMonthLabel(m)}</option>)}
                 </select>
               </div>
             )}
-            <div style={{cursor:'pointer', color:'var(--text-muted-dark)'}} onClick={()=>setActiveTab('config')}>
+            <div className="config-btn" onClick={()=>setActiveTab('config')}>
                <SvgIcon name="config" size={24} />
             </div>
           </div>
