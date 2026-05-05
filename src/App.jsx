@@ -717,8 +717,9 @@ const [notificationDays, setNotificationDays] = useState(1);
 
   const { totalBal, monthInc, monthExp } = useMemo(() => {
     let tBal = 0, mInc = 0, mExp = 0;
+    const todayStr = new Date().toISOString().split('T')[0];
     transactions.forEach(t => { 
-      if (t.date.substring(0, 7) <= selectedMonth) {
+      if (t.date <= todayStr) {
         const acc = accounts.find(a => a.id === t.accountId);
         if (acc && acc.type === 'income') {
           if (t.type === 'entrada') tBal += t.amount;
@@ -729,13 +730,14 @@ const [notificationDays, setNotificationDays] = useState(1);
     });
     monthData.forEach(t => { if(t.type === 'entrada') mInc += t.amount; else mExp += t.amount; });
     return { totalBal: tBal, monthInc: mInc, monthExp: mExp };
-  }, [transactions, monthData, selectedMonth, accounts]);
+  }, [transactions, monthData, accounts]);
 
   const accountBalances = useMemo(() => {
     const bals = {};
+    const todayStr = new Date().toISOString().split('T')[0];
     accounts.forEach(a => bals[a.id] = 0);
     transactions.forEach(t => {
-      if (bals[t.accountId] !== undefined && t.date.substring(0, 7) <= selectedMonth) {
+      if (bals[t.accountId] !== undefined && t.date <= todayStr) {
         const acc = accounts.find(a => a.id === t.accountId);
         if (acc) {
           if (acc.type === 'income') {
@@ -747,7 +749,7 @@ const [notificationDays, setNotificationDays] = useState(1);
       }
     });
     return bals;
-  }, [transactions, accounts, selectedMonth]);
+  }, [transactions, accounts]);
 
   const donutData = useMemo(() => {
     const map = {};
@@ -1215,12 +1217,9 @@ const [notificationDays, setNotificationDays] = useState(1);
             <div className="total-balance-box">
               <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
                 <div>
-                  <div style={{fontSize:'0.9rem', opacity:0.8}}>{selectedMonth > getCurrentMonthStr() ? 'Saldo Projetado' : 'Saldo Acumulado'}</div>
+                  <div style={{fontSize:'0.9rem', opacity:0.8}}>Saldo Atual</div>
                   <div style={{fontSize:'2.2rem', fontWeight:700}}>{safeFormat(totalBal)}</div>
                 </div>
-                {selectedMonth > getCurrentMonthStr() && (
-                  <div style={{background:'rgba(255,255,255,0.2)', padding:'4px 10px', borderRadius:'100px', fontSize:'0.7rem', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.5px'}}>Projeção</div>
-                )}
               </div>
             </div>
 
