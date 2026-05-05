@@ -28,7 +28,10 @@ const SvgIcon = ({ name, size = 24 }) => {
     bank: <g strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"><polygon points="12 2 2 7 22 7"/><line x1="6" y1="22" x2="6" y2="11"/><line x1="10" y1="22" x2="10" y2="11"/><line x1="14" y1="22" x2="14" y2="11"/><line x1="18" y1="22" x2="18" y2="11"/><line x1="2" y1="22" x2="22" y2="22"/></g>,
     credit_card: <g strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></g>,
     money: <g strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"><rect x="2" y="6" width="20" height="12" rx="2" /><circle cx="12" cy="12" r="2" /><path d="M6 12h.01M18 12h.01" /></g>,
-    pix: <g strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"><path d="M12 3l8 9-8 9-8-9 8-9z" /><path d="M12 6.5l4.5 5.5-4.5 5.5-4.5-5.5 4.5-5.5z" /></g>
+    pix: <g strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"><path d="M12 3l8 9-8 9-8-9 8-9z" /><path d="M12 6.5l4.5 5.5-4.5 5.5-4.5-5.5 4.5-5.5z" /></g>,
+    airplane: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />,
+    users: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />,
+    camera: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
   };
   return (
     <svg width={size} height={size} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -38,7 +41,7 @@ const SvgIcon = ({ name, size = 24 }) => {
 };
 
 // --- DEFINIÇÕES DE DADOS ---
-const EXPENSE_CATEGORIES = [
+const DEFAULT_EXPENSE_CATEGORIES = [
   { id: 'alimentacao', label: 'Alimentação', color: '#FF7A59' },
   { id: 'transporte', label: 'Transporte', color: '#FFB142' },
   { id: 'moradia', label: 'Moradia', color: '#00C896' },
@@ -49,16 +52,14 @@ const EXPENSE_CATEGORIES = [
   { id: 'outros_saida', label: 'Outros', color: '#A0AEC0' }
 ];
 
-const INCOME_CATEGORIES = [
+const DEFAULT_INCOME_CATEGORIES = [
   { id: 'salario', label: 'Salário', color: '#00C896' },
   { id: 'freelance', label: 'Freelance', color: '#0097E6' },
   { id: 'investimento', label: 'Invstmnt', color: '#8C7AE6' },
   { id: 'presente', label: 'Presente', color: '#FFB142' }
 ];
 
-const ALL_CATEGORIES = [...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES];
-
-const getCategoryInfo = (id) => ALL_CATEGORIES.find(c => c.id === id) || { label: 'Desconhecido', color: '#A0AEC0' };
+const getCategoryInfo = (id, allCats) => (allCats || []).find(c => c.id === id) || { label: 'Desconhecido', color: '#A0AEC0' };
 
 const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 const getMonthLabel = (dateStr) => {
@@ -333,7 +334,7 @@ const ChartBars = ({ options, dataIncome, dataExpense }) => {
   );
 };
 
-const ChartDonut = ({ data, safeFormat }) => {
+const ChartDonut = ({ data, safeFormat, allCats }) => {
   const total = data.reduce((acc, curr) => acc + curr.value, 0);
   let offset = 0;
 
@@ -368,18 +369,25 @@ const ChartDonut = ({ data, safeFormat }) => {
   );
 };
 
-const ItemTx = ({ tx, onDelete, onEdit, safeFormat, showDate = true }) => {
+const ItemTx = ({ tx, onDelete, onEdit, safeFormat, showDate = true, allCats, trips = [] }) => {
   const [opened, setOpened] = useState(false);
-  const info = getCategoryInfo(tx.category);
+  const info = getCategoryInfo(tx.category, allCats);
   const isInc = tx.type === 'entrada';
+  const trip = tx.tripId ? trips.find(t => t.id === tx.tripId) : null;
   
   return (
     <div style={{display:'flex', flexDirection:'column'}}>
       <div className="tx-item" onClick={() => setOpened(!opened)}>
         <div className="tx-icon-bg" style={{background: `${info.color}20`, color: info.color}}><SvgIcon name={tx.category} size={24} /></div>
         <div className="tx-texts">
-          <h4 className="tx-title">{tx.description}</h4>
-          <p className="tx-desc">{info.label} • {tx.accountName || 'Carteira'}</p>
+          <h4 className="tx-title">
+            {tx.description}
+            {tx.attachment && <span style={{marginLeft:6, color:'var(--text-muted-dark)'}}><SvgIcon name="paperclip" size={12}/></span>}
+          </h4>
+          <p className="tx-desc">
+            {info.label} • {tx.accountName || 'Carteira'}
+            {trip && <span style={{color: trip.color, marginLeft: 6}}>✈ {trip.name}</span>}
+          </p>
         </div>
         <div>
           <div className="tx-val" style={{color: isInc ? 'var(--color-income)' : 'var(--text-main-dark)'}}>
@@ -390,9 +398,16 @@ const ItemTx = ({ tx, onDelete, onEdit, safeFormat, showDate = true }) => {
       </div>
       
       {opened && (
-        <div className="tx-actions">
-          <button className="btn-act edit" onClick={() => onEdit(tx)}><SvgIcon name="edit" size={16} /> Editar</button>
-          <button className="btn-act del" onClick={() => onDelete(tx.id)}><SvgIcon name="trash" size={16} /> Excluir</button>
+        <div className="tx-actions" style={{flexDirection: 'column'}}>
+          {tx.attachment && (
+            <div style={{marginBottom:'12px', display:'flex', justifyContent:'center'}}>
+              <img src={tx.attachment} alt="Comprovante" style={{maxHeight:'200px', borderRadius:'12px', objectFit:'contain', background:'rgba(0,0,0,0.2)', width:'100%'}}/>
+            </div>
+          )}
+          <div style={{display:'flex', justifyContent:'flex-end', gap:'8px'}}>
+            <button className="btn-act edit" onClick={() => onEdit(tx)}><SvgIcon name="edit" size={16} /> Editar</button>
+            <button className="btn-act del" onClick={() => onDelete(tx.id)}><SvgIcon name="trash" size={16} /> Excluir</button>
+          </div>
         </div>
       )}
     </div>
@@ -401,7 +416,7 @@ const ItemTx = ({ tx, onDelete, onEdit, safeFormat, showDate = true }) => {
 
 // --- FORMULÁRIOS ---
 
-const BottomSheet = ({ onClose, onSave, initialData, accounts }) => {
+const BottomSheet = ({ onClose, onSave, initialData, accounts, expenseCats, incomeCats, trips = [] }) => {
   const isEdit = !!initialData;
   const [mode, setMode] = useState(isEdit ? 'detail' : 'fast');
   const [type, setType] = useState(initialData?.type || 'saida');
@@ -414,17 +429,43 @@ const BottomSheet = ({ onClose, onSave, initialData, accounts }) => {
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurrenceCount, setRecurrenceCount] = useState('2');
   const [errorMsg, setErrorMsg] = useState('');
+  
+  const [attachment, setAttachment] = useState(initialData?.attachment || null);
+  const [tripId, setTripId] = useState(initialData?.tripId || '');
+  const [splitAmountStr, setSplitAmountStr] = useState('');
 
   const triggerError = (msg) => { setErrorMsg(msg); setTimeout(() => setErrorMsg(''), 3500); };
-  const cats = type === 'saida' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
+  const cats = type === 'saida' ? expenseCats : incomeCats;
   const handleMask = (val) => val.replace(/[^0-9,]/g, '');
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (evt) => {
+      const img = new Image();
+      img.src = evt.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 600;
+        const scaleSize = Math.min(MAX_WIDTH / img.width, 1);
+        canvas.width = img.width * scaleSize;
+        canvas.height = img.height * scaleSize;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        setAttachment(canvas.toDataURL('image/jpeg', 0.6));
+      }
+    };
+  };
 
   const handleSave = () => {
     const rawVal = parseFloat(amountStr.replace(',', '.'));
     if (!rawVal || isNaN(rawVal) || rawVal <= 0) return triggerError('Insira um valor válido acima de 0.');
     if (!category) return triggerError('Por favor, selecione uma categoria.');
 
-    const catInfo = getCategoryInfo(category);
+    const allCats = [...expenseCats, ...incomeCats];
+    const catInfo = getCategoryInfo(category, allCats);
     const descFinal = (mode === 'fast' && !dateEnabled) || !desc.trim() ? catInfo.label : desc;
     const dateFinal = (mode === 'fast' && !dateEnabled) ? new Date().toISOString().split('T')[0] : date;
     const numMonths = (!isEdit && mode === 'detail' && isRecurring) ? parseInt(recurrenceCount) || 1 : 1;
@@ -444,7 +485,9 @@ const BottomSheet = ({ onClose, onSave, initialData, accounts }) => {
           description: descFinal + recurringSuffix,
           date: `${yStr}-${mStr}-${dStr}`,
           timestamp: isEdit ? initialData.timestamp : nowStamp + i,
-          accountId
+          accountId,
+          attachment,
+          tripId: tripId || null
         });
     }
 
@@ -517,6 +560,40 @@ const BottomSheet = ({ onClose, onSave, initialData, accounts }) => {
                 {isRecurring && <input type="number" min="2" max="36" className="modern-input" placeholder="Repetir por quantos meses? (ex: 12)" value={recurrenceCount} onChange={e=>setRecurrenceCount(e.target.value)} />}
               </>
             )}
+
+            {!isEdit && type === 'saida' && (
+              <div style={{marginBottom:'16px', background:'var(--bg-surface-dark)', padding:'12px', borderRadius:'14px'}}>
+                <label style={{fontSize:'0.85rem', color:'var(--text-muted-dark)'}}><SvgIcon name="users" size={16}/> Cobrar de Terceiros</label>
+                <div style={{display:'flex', alignItems:'center', gap:'8px', marginTop:'8px'}}>
+                  <span style={{fontSize:'1rem', fontWeight:500, color:'var(--text-muted-dark)'}}>R$</span>
+                  <input type="text" inputMode="decimal" className="modern-input" placeholder="0,00" style={{margin:0, flex:1}} value={splitAmountStr} onChange={e=>setSplitAmountStr(handleMask(e.target.value))} />
+                </div>
+                {parseFloat(splitAmountStr.replace(',','.')) > 0 && amountStr && (
+                  <div style={{marginTop:'12px', fontSize:'0.9rem', color:'var(--color-primary)'}}>
+                    <button className="btn-outline" style={{width:'100%', fontSize:'0.8rem', padding:'8px'}} onClick={() => {
+                       const val = parseFloat(splitAmountStr.replace(',','.')).toFixed(2);
+                       navigator.clipboard.writeText(`A despesa "${desc || 'Gasto'}" teve uma parte sua de R$ ${val.replace('.',',')}. Me faz o Pix!`);
+                       triggerError('Mensagem copiada!');
+                    }}>Copiar Cobrança</button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {trips && trips.length > 0 && (
+               <select className="modern-select" value={tripId} onChange={e=>setTripId(e.target.value)}>
+                 <option value="">Sem Viagem / Evento</option>
+                 {trips.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+               </select>
+            )}
+
+            <div style={{marginBottom:'16px'}}>
+              <label className="btn-outline" style={{display:'flex', justifyContent:'center', alignItems:'center', gap:'8px', cursor:'pointer'}}>
+                <SvgIcon name="camera" size={18} /> {attachment ? 'Trocar Comprovante' : 'Anexar Comprovante'}
+                <input type="file" accept="image/*" style={{display:'none'}} onChange={handleImageUpload} />
+              </label>
+              {attachment && <img src={attachment} alt="Anexo" style={{marginTop:'12px', borderRadius:'12px', maxHeight:'120px', objectFit:'cover', width:'100%'}} />}
+            </div>
           </div>
         )}
 
@@ -541,6 +618,12 @@ export default function App() {
   // Data States
   const [transactions, setTransactions] = useState([]);
   const [accounts, setAccounts] = useState(DEFAULT_ACCOUNTS);
+  const [expenseCategories, setExpenseCategories] = useState(DEFAULT_EXPENSE_CATEGORIES);
+  const [incomeCategories, setIncomeCategories] = useState(DEFAULT_INCOME_CATEGORIES);
+  const [trips, setTrips] = useState(() => {
+    const saved = localStorage.getItem('financeTripsV2');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [budgets, setBudgets] = useState({});
   const [quickActions, setQuickActions] = useState([{ id: 'qa1', title: '☕ Café', amount: 5, category: 'alimentacao' }, { id: 'qa2', title: '🚌 Ônibus', amount: 4.5, category: 'transporte' }]);
   const [hideValues, setHideValues] = useState(false);
@@ -597,6 +680,8 @@ const [notificationDays, setNotificationDays] = useState(1);
   useEffect(() => {
     const rawTx = localStorage.getItem('financeTransactionsV2');
     const rawAcc = localStorage.getItem('financeAccountsV2');
+    const rawExpCats = localStorage.getItem('financeExpenseCategories');
+    const rawIncCats = localStorage.getItem('financeIncomeCategories');
     const rawBud = localStorage.getItem('financeBudgetsV2');
     const rawQa = localStorage.getItem('financeQuickActions');
     const rawName = localStorage.getItem('financeUserName');
@@ -604,6 +689,8 @@ const [notificationDays, setNotificationDays] = useState(1);
     
     if (rawTx) setTransactions(JSON.parse(rawTx));
     if (rawAcc) setAccounts(JSON.parse(rawAcc));
+    if (rawExpCats) setExpenseCategories(JSON.parse(rawExpCats));
+    if (rawIncCats) setIncomeCategories(JSON.parse(rawIncCats));
     if (rawBud) setBudgets(JSON.parse(rawBud));
     if (rawQa) setQuickActions(JSON.parse(rawQa));
     if (rawName) setUserName(rawName);
@@ -753,12 +840,13 @@ const [notificationDays, setNotificationDays] = useState(1);
 
   const donutData = useMemo(() => {
     const map = {};
+    const allCats = [...expenseCategories, ...incomeCategories];
     monthData.filter(t => t.type === 'saida').forEach(t => { map[t.category] = (map[t.category] || 0) + t.amount; });
     return Object.keys(map).map(k => {
-      const info = getCategoryInfo(k);
+      const info = getCategoryInfo(k, allCats);
       return { label: info.label, value: map[k], color: info.color };
     });
-  }, [monthData]);
+  }, [monthData, expenseCategories, incomeCategories]);
 
   const barData = useMemo(() => {
     const ms = [...availableMonths].slice(0, 6).reverse(); // Last 6 months
@@ -771,6 +859,7 @@ const [notificationDays, setNotificationDays] = useState(1);
   const activeAlerts = useMemo(() => {
     const alerts = [];
     // Budget Alerts
+    const allCats = [...expenseCategories, ...incomeCategories];
     Object.keys(budgets).forEach(catKey => {
       const limit = budgets[catKey];
       const spent = transactions.filter(t => t.date.startsWith(selectedMonth) && t.category === catKey && t.type === 'saida').reduce((s,t) => s + t.amount, 0);
@@ -852,10 +941,11 @@ const [notificationDays, setNotificationDays] = useState(1);
       const first = months[0].amount;
       const last = months[months.length - 1].amount;
       const change = first > 0 ? ((last - first) / first) * 100 : 0;
-      const info = getCategoryInfo(cat);
+      const allCats = [...expenseCategories, ...incomeCategories];
+      const info = getCategoryInfo(cat, allCats);
       return { category: cat, label: info.label, color: info.color, change, first, last };
     }).filter(Boolean).sort((a,b) => Math.abs(b.change) - Math.abs(a.change));
-  }, [transactions, availableMonths]);
+  }, [transactions, availableMonths, expenseCategories, incomeCategories]);
 
   const monthlyComparison = useMemo(() => {
     const ms = [...availableMonths].slice(0, 2).reverse();
@@ -1091,12 +1181,49 @@ const [notificationDays, setNotificationDays] = useState(1);
   };
 
   const exportData = () => {
-    const dataObj = { transactions, accounts, budgets };
-    const blob = new Blob([JSON.stringify(dataObj)], {type: "application/json"});
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `finance_backup_${new Date().toISOString().split('T')[0]}.json`;
-    link.click();
+    const data = {
+      transactions,
+      accounts,
+      expenseCategories,
+      incomeCategories,
+      trips,
+      budgets,
+      quickActions,
+      userName,
+      settings: {
+        showMonthPicker,
+        showDateOnExpense,
+        notificationDays
+      }
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `nox_backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+  };
+
+  const exportToCSV = () => {
+    const allCats = [...expenseCategories, ...incomeCategories];
+    const headers = ['Data', 'Descrição', 'Valor', 'Tipo', 'Categoria', 'Conta'];
+    const rows = transactions.map(t => [
+      t.date,
+      t.description,
+      t.amount.toString().replace('.', ','),
+      t.type === 'entrada' ? 'Entrada' : 'Saída',
+      getCategoryInfo(t.category, allCats).label,
+      accounts.find(a => a.id === t.accountId)?.name || 'Carteira'
+    ]);
+    
+    const csvContent = [headers, ...rows].map(e => e.join(';')).join('\n');
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `nox_transacoes_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    showToast('Relatório CSV baixado!', 'success');
   };
 
   const importData = (e) => {
@@ -1110,6 +1237,9 @@ const [notificationDays, setNotificationDays] = useState(1);
           setTransactions(obj.transactions); localStorage.setItem('financeTransactionsV2', JSON.stringify(obj.transactions));
           if(obj.accounts) { setAccounts(obj.accounts); localStorage.setItem('financeAccountsV2', JSON.stringify(obj.accounts)); }
           if(obj.budgets) { setBudgets(obj.budgets); localStorage.setItem('financeBudgetsV2', JSON.stringify(obj.budgets)); }
+          if(obj.expenseCategories) { setExpenseCategories(obj.expenseCategories); localStorage.setItem('financeExpenseCategories', JSON.stringify(obj.expenseCategories)); }
+          if(obj.incomeCategories) { setIncomeCategories(obj.incomeCategories); localStorage.setItem('financeIncomeCategories', JSON.stringify(obj.incomeCategories)); }
+          if(obj.trips) { setTrips(obj.trips); localStorage.setItem('financeTripsV2', JSON.stringify(obj.trips)); }
           showToast('Dados importados com sucesso!', 'success');
         }
       } catch(ex) { showToast('Arquivo corrompido ou inválido.', 'error'); }
@@ -1204,7 +1334,10 @@ const [notificationDays, setNotificationDays] = useState(1);
                 </select>
               </div>
             )}
-            <div className="config-btn" onClick={()=>setActiveTab('config')}>
+            <div className="config-btn" onClick={()=>setActiveTab('trips')} style={{ color: activeTab === 'trips' ? 'var(--color-primary)' : 'var(--text-muted-dark)' }}>
+               <SvgIcon name="airplane" size={24} />
+            </div>
+            <div className="config-btn" onClick={()=>setActiveTab('config')} style={{ color: activeTab === 'config' ? 'var(--color-primary)' : 'var(--text-muted-dark)' }}>
                <SvgIcon name="config" size={24} />
             </div>
           </div>
@@ -1301,7 +1434,9 @@ const [notificationDays, setNotificationDays] = useState(1);
               ) : (
                 <div style={{display:'flex', flexDirection:'column', gap:'16px'}}>
                   {Object.keys(budgets).map(catKey => {
-                    const limit = budgets[catKey]; const info = getCategoryInfo(catKey);
+                    const limit = budgets[catKey]; 
+                    const allCats = [...expenseCategories, ...incomeCategories];
+                    const info = getCategoryInfo(catKey, allCats);
                     const spent = monthData.filter(t=>t.category===catKey && t.type==='saida').reduce((s,t)=>s+t.amount,0);
                     const pct = Math.min((spent / limit) * 100, 100);
                     const barColor = pct > 90 ? 'var(--color-expense)' : pct > 75 ? 'var(--color-warning)' : info.color;
@@ -1322,7 +1457,7 @@ const [notificationDays, setNotificationDays] = useState(1);
 
             <div className="glass-card">
               <h3 className="section-title">Despesas p/ Categoria</h3>
-              <ChartDonut data={donutData} safeFormat={safeFormat} />
+              <ChartDonut data={donutData} safeFormat={safeFormat} allCats={[...expenseCategories, ...incomeCategories]} />
             </div>
           </div>
         )}
@@ -1759,7 +1894,7 @@ const [notificationDays, setNotificationDays] = useState(1);
 
                 {cardStatementData.transactions.length > 0 ? (
                   cardStatementData.transactions.map(tx => (
-                    <ItemTx key={tx.id} tx={tx} onDelete={handleDelete} onEdit={openEdit} safeFormat={safeFormat} showDate={showDateOnExpense} />
+                    <ItemTx key={tx.id} tx={tx} onDelete={handleDelete} onEdit={openEdit} safeFormat={safeFormat} showDate={showDateOnExpense} allCats={[...expenseCategories, ...incomeCategories]} />
                   ))
                 ) : (
                   <div style={{textAlign:'center', padding:'20px', color:'var(--text-muted-dark)', fontSize:'0.85rem'}}>
@@ -1776,7 +1911,7 @@ const [notificationDays, setNotificationDays] = useState(1);
                   <span style={{fontSize:'0.7rem', color:'var(--color-primary)', cursor:'pointer'}} onClick={() => setSelectedAccountFilter(null)}>Fechar</span>
                 </div>
                 {monthData.filter(t => t.accountId === selectedAccountFilter).map(tx => (
-                  <ItemTx key={tx.id} tx={tx} onDelete={handleDelete} onEdit={openEdit} safeFormat={safeFormat} showDate={showDateOnExpense} />
+                  <ItemTx key={tx.id} tx={tx} onDelete={handleDelete} onEdit={openEdit} safeFormat={safeFormat} showDate={showDateOnExpense} allCats={[...expenseCategories, ...incomeCategories]} />
                 ))}
                 {monthData.filter(t => t.accountId === selectedAccountFilter).length === 0 && (
                   <div style={{textAlign:'center', padding:'20px', color:'var(--text-muted-dark)', fontSize:'0.85rem'}}>
@@ -1796,12 +1931,13 @@ const [notificationDays, setNotificationDays] = useState(1);
              <div style={{display:'flex', gap:'8px', overflowX:'auto', marginBottom:'20px', paddingBottom:'8px'}}>
                <div className={`chip ${!selectedCategoryFilter ? 'active' : ''}`} onClick={() => setSelectedCategoryFilter('')}>Todas</div>
                <div className={`chip ${selectedCategoryFilter === 'entrada' ? 'active' : ''}`} onClick={() => setSelectedCategoryFilter('entrada')}>Entradas</div>
-               {EXPENSE_CATEGORIES.map(c => <div key={c.id} className={`chip ${selectedCategoryFilter === c.id ? 'active' : ''}`} onClick={() => setSelectedCategoryFilter(c.id)}>{c.label}</div>)}
+               {expenseCategories.map(c => <div key={c.id} className={`chip ${selectedCategoryFilter === c.id ? 'active' : ''}`} onClick={() => setSelectedCategoryFilter(c.id)}>{c.label}</div>)}
+               {incomeCategories.map(c => <div key={c.id} className={`chip ${selectedCategoryFilter === c.id ? 'active' : ''}`} onClick={() => setSelectedCategoryFilter(c.id)}>{c.label}</div>)}
              </div>
 
              <div className="glass-card" style={{minHeight:'60vh'}}>
                 <h3 className="section-title">Resultados de {getMonthLabel(selectedMonth)}</h3>
-                {monthData.map(tx => <ItemTx key={tx.id} tx={tx} onDelete={handleDelete} onEdit={openEdit} safeFormat={safeFormat} showDate={showDateOnExpense} />)}
+                {monthData.map(tx => <ItemTx key={tx.id} tx={tx} onDelete={handleDelete} onEdit={openEdit} safeFormat={safeFormat} showDate={showDateOnExpense} allCats={[...expenseCategories, ...incomeCategories]} />)}
                 {monthData.length === 0 && (
                   <div style={{display:'flex', flexDirection:'column', alignItems:'center', marginTop:'50px', color:'var(--text-muted-dark)'}}>
                     <SvgIcon name="search" size={48} />
@@ -1856,13 +1992,26 @@ const [notificationDays, setNotificationDays] = useState(1);
             </div>
 
             <div className="glass-card">
-              <h3 className="section-title">Metas de Gastos</h3>
-              <div style={{fontSize:'0.85rem', color:'var(--text-muted-dark)', marginBottom:'16px'}}>Defina limites para ser alertado. Deixe em 0 para remover a meta.</div>
-              {EXPENSE_CATEGORIES.map(c => (
+              <h3 className="section-title">Categorias e Metas</h3>
+              <div style={{fontSize:'0.85rem', color:'var(--text-muted-dark)', marginBottom:'16px'}}>Gerencie suas categorias e defina metas mensais.</div>
+              
+              <h4 style={{fontSize:'0.9rem', color:'var(--text-main-dark)', marginBottom:'12px'}}>Saídas</h4>
+              {expenseCategories.map(c => (
                 <div key={c.id} style={{display:'flex', alignItems:'center', gap:'12px', marginBottom:'12px'}}>
                   <div style={{width:'32px', height:'32px', borderRadius:'8px', background:'var(--bg-page-dark)', display:'flex', justifyContent:'center', alignItems:'center', color:c.color}}><SvgIcon name={c.id} size={18}/></div>
-                  <div style={{flex:1, fontSize:'0.9rem'}}>{c.label}</div>
-                  <input type="number" className="modern-input" style={{width:'100px', padding:'10px', margin:0, textAlign:'center'}} placeholder="R$ 0" 
+                  <div style={{flex:1, fontSize:'0.9rem'}}>
+                    <input 
+                      type="text" 
+                      value={c.label} 
+                      style={{background:'transparent', border:'none', color:'white', fontSize:'0.9rem', width:'100%'}}
+                      onChange={e => {
+                        const newCats = expenseCategories.map(cat => cat.id === c.id ? {...cat, label: e.target.value} : cat);
+                        setExpenseCategories(newCats);
+                        localStorage.setItem('financeExpenseCategories', JSON.stringify(newCats));
+                      }}
+                    />
+                  </div>
+                  <input type="number" className="modern-input" style={{width:'80px', padding:'8px', margin:0, textAlign:'center'}} placeholder="Meta" 
                     value={budgets[c.id] || ''} 
                     onChange={e => {
                       const v = parseFloat(e.target.value); const nb = {...budgets};
@@ -1870,8 +2019,65 @@ const [notificationDays, setNotificationDays] = useState(1);
                       setBudgets(nb); localStorage.setItem('financeBudgetsV2', JSON.stringify(nb));
                     }} 
                   />
+                  {expenseCategories.length > 1 && (
+                    <button style={{background:'transparent', border:'none', color:'var(--color-expense)', cursor:'pointer'}} onClick={() => {
+                      if(confirm(`Excluir categoria "${c.label}"? Isso não apaga os lançamentos já feitos.`)) {
+                        const newCats = expenseCategories.filter(cat => cat.id !== c.id);
+                        setExpenseCategories(newCats);
+                        localStorage.setItem('financeExpenseCategories', JSON.stringify(newCats));
+                      }
+                    }}><SvgIcon name="trash" size={16}/></button>
+                  )}
                 </div>
               ))}
+              <button 
+                className="btn-outline" 
+                style={{width:'100%', marginTop:'8px', marginBottom:'24px'}}
+                onClick={() => {
+                  const newId = 'cat_' + Date.now();
+                  const newCats = [...expenseCategories, { id: newId, label: 'Nova Categoria', color: '#A0AEC0' }];
+                  setExpenseCategories(newCats);
+                  localStorage.setItem('financeExpenseCategories', JSON.stringify(newCats));
+                }}
+              >+ Nova Categoria de Saída</button>
+
+              <h4 style={{fontSize:'0.9rem', color:'var(--text-main-dark)', marginBottom:'12px'}}>Entradas</h4>
+              {incomeCategories.map(c => (
+                <div key={c.id} style={{display:'flex', alignItems:'center', gap:'12px', marginBottom:'12px'}}>
+                  <div style={{width:'32px', height:'32px', borderRadius:'8px', background:'var(--bg-page-dark)', display:'flex', justifyContent:'center', alignItems:'center', color:c.color}}><SvgIcon name={c.id} size={18}/></div>
+                  <div style={{flex:1, fontSize:'0.9rem'}}>
+                    <input 
+                      type="text" 
+                      value={c.label} 
+                      style={{background:'transparent', border:'none', color:'white', fontSize:'0.9rem', width:'100%'}}
+                      onChange={e => {
+                        const newCats = incomeCategories.map(cat => cat.id === c.id ? {...cat, label: e.target.value} : cat);
+                        setIncomeCategories(newCats);
+                        localStorage.setItem('financeIncomeCategories', JSON.stringify(newCats));
+                      }}
+                    />
+                  </div>
+                  {incomeCategories.length > 1 && (
+                    <button style={{background:'transparent', border:'none', color:'var(--color-expense)', cursor:'pointer'}} onClick={() => {
+                      if(confirm(`Excluir categoria "${c.label}"?`)) {
+                        const newCats = incomeCategories.filter(cat => cat.id !== c.id);
+                        setIncomeCategories(newCats);
+                        localStorage.setItem('financeIncomeCategories', JSON.stringify(newCats));
+                      }
+                    }}><SvgIcon name="trash" size={16}/></button>
+                  )}
+                </div>
+              ))}
+              <button 
+                className="btn-outline" 
+                style={{width:'100%', marginTop:'8px'}}
+                onClick={() => {
+                  const newId = 'cat_' + Date.now();
+                  const newCats = [...incomeCategories, { id: newId, label: 'Nova Categoria', color: '#00C896' }];
+                  setIncomeCategories(newCats);
+                  localStorage.setItem('financeIncomeCategories', JSON.stringify(newCats));
+                }}
+              >+ Nova Categoria de Entrada</button>
             </div>
 
             <div className="glass-card" style={{marginBottom: '16px'}}>
@@ -1940,11 +2146,73 @@ const [notificationDays, setNotificationDays] = useState(1);
                 <div style={{fontSize:'0.9rem'}}>Fazer Backup (JSON)</div>
                 <button className="btn-outline" onClick={exportData}>Baixar</button>
               </div>
+              <div className="setting-row">
+                <div style={{fontSize:'0.9rem'}}>Exportar Relatório (CSV)</div>
+                <button className="btn-outline" onClick={exportToCSV}>Baixar CSV</button>
+              </div>
               <div className="setting-row" style={{border:0}}>
                 <div style={{fontSize:'0.9rem'}}>Restaurar Backup</div>
                 <label className="btn-outline"> Escolher <input type="file" style={{display:'none'}} accept=".json" onChange={importData} /></label>
               </div>
             </div>
+          </div>
+        )}
+
+        {activeTab === 'trips' && (
+          <div className="tab-content content-pad" style={{paddingTop: '20px'}}>
+            <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px'}}>
+              <h2 className="section-title" style={{margin:0}}>Modo Viagem / Eventos</h2>
+              <button className="btn-outline" style={{padding:'6px 12px', fontSize:'0.8rem'}} onClick={() => {
+                const name = prompt('Nome da Viagem/Evento:');
+                if(name) {
+                  const newTrip = { id: `trip_${Date.now()}`, name, color: '#FFB142', budget: 0 };
+                  const updated = [...trips, newTrip];
+                  setTrips(updated);
+                  localStorage.setItem('financeTripsV2', JSON.stringify(updated));
+                  showToast('Viagem criada!', 'success');
+                }
+              }}><SvgIcon name="lazer" size={14}/> Criar</button>
+            </div>
+            {trips.length === 0 ? (
+              <div style={{textAlign:'center', padding:'40px 20px', color:'var(--text-muted-dark)'}}>
+                <SvgIcon name="airplane" size={48} />
+                <p style={{marginTop:'12px'}}>Nenhuma viagem cadastrada.<br/>Crie uma para agrupar gastos específicos!</p>
+              </div>
+            ) : (
+              <div style={{display:'flex', flexDirection:'column', gap:'16px', paddingBottom:'20px'}}>
+                {trips.map(trip => {
+                  const tripTxs = transactions.filter(t => t.tripId === trip.id);
+                  const totalSpent = tripTxs.reduce((acc, t) => acc + (t.type === 'saida' ? t.amount : -t.amount), 0);
+                  return (
+                    <div key={trip.id} className="glass-card" style={{padding:'16px'}}>
+                      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'12px'}}>
+                        <h3 style={{margin:0, display:'flex', alignItems:'center', gap:'8px'}}><SvgIcon name="airplane" size={18}/> {trip.name}</h3>
+                        <span style={{fontWeight:600, color: totalSpent > 0 ? 'var(--color-expense)' : 'var(--text-main-dark)'}}>{safeFormat(totalSpent)}</span>
+                      </div>
+                      {tripTxs.length > 0 ? (
+                        tripTxs.map(tx => <ItemTx key={tx.id} tx={tx} onDelete={(id) => {
+                          const updated = transactions.filter(t => t.id !== id);
+                          setTransactions(updated);
+                          localStorage.setItem('financeTransactionsV2', JSON.stringify(updated));
+                        }} onEdit={t => { setEditTx(t); setSheetOpen(true); }} safeFormat={safeFormat} allCats={[...expenseCategories, ...incomeCategories]} trips={trips} />)
+                      ) : (
+                        <div style={{fontSize:'0.8rem', color:'var(--text-muted-dark)', textAlign:'center'}}>Nenhum gasto nesta viagem ainda.</div>
+                      )}
+                      <button style={{marginTop:'12px', background:'rgba(255, 74, 107, 0.1)', color:'var(--color-expense)', border:'none', padding:'8px', borderRadius:'8px', width:'100%', cursor:'pointer', fontSize:'0.8rem'}} onClick={() => {
+                        if(confirm(`Excluir a viagem "${trip.name}"? Os lançamentos não serão apagados, apenas desvinculados.`)) {
+                           const updatedTxs = transactions.map(t => t.tripId === trip.id ? {...t, tripId: null} : t);
+                           setTransactions(updatedTxs);
+                           localStorage.setItem('financeTransactionsV2', JSON.stringify(updatedTxs));
+                           const updatedTrips = trips.filter(t => t.id !== trip.id);
+                           setTrips(updatedTrips);
+                           localStorage.setItem('financeTripsV2', JSON.stringify(updatedTrips));
+                        }
+                      }}>Excluir Viagem</button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
@@ -1964,7 +2232,7 @@ const [notificationDays, setNotificationDays] = useState(1);
         </div>
 
         {/* BOTTOM SHEET ROOT */}
-        {sheetOpen && <BottomSheet initialData={editTx} accounts={accounts} onClose={()=>setSheetOpen(false)} onSave={handleSaveTx} />}
+        {sheetOpen && <BottomSheet initialData={editTx} accounts={accounts} expenseCats={expenseCategories} incomeCats={incomeCategories} trips={trips} onClose={()=>setSheetOpen(false)} onSave={handleSaveTx} />}
 
         {/* ADD ACCOUNT MODAL */}
         {showAddAccount && (
