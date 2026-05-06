@@ -623,6 +623,8 @@ export default function App() {
   const [accounts, setAccounts] = useState(DEFAULT_ACCOUNTS);
   const [expenseCategories, setExpenseCategories] = useState(DEFAULT_EXPENSE_CATEGORIES);
   const [incomeCategories, setIncomeCategories] = useState(DEFAULT_INCOME_CATEGORIES);
+  const [showCreateTripModal, setShowCreateTripModal] = useState(false);
+  const [newTripName, setNewTripName] = useState('');
   const [trips, setTrips] = useState(() => {
     const saved = localStorage.getItem('financeTripsV2');
     return saved ? JSON.parse(saved) : [];
@@ -2163,18 +2165,13 @@ const [notificationDays, setNotificationDays] = useState(1);
 
         {activeTab === 'trips' && (
           <div className="tab-content content-pad" style={{paddingTop: '20px'}}>
+            <div className="alert-banner" style={{marginBottom: '16px', background: 'rgba(61, 206, 168, 0.1)', border: '1px solid rgba(61, 206, 168, 0.3)'}}>
+              <SvgIcon name="airplane" size={18}/>
+              Crie uma viagem ou evento para agrupar gastos específicos e acompanhar o total gasto durante o período!
+            </div>
             <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px'}}>
               <h2 className="section-title" style={{margin:0}}>Modo Viagem / Eventos</h2>
-              <button className="btn-outline" style={{padding:'6px 12px', fontSize:'0.8rem'}} onClick={() => {
-                const name = prompt('Nome da Viagem/Evento:');
-                if(name) {
-                  const newTrip = { id: `trip_${Date.now()}`, name, color: '#FFB142', budget: 0 };
-                  const updated = [...trips, newTrip];
-                  setTrips(updated);
-                  localStorage.setItem('financeTripsV2', JSON.stringify(updated));
-                  showToast('Viagem criada!', 'success');
-                }
-              }}><SvgIcon name="lazer" size={14}/> Criar</button>
+              <button className="btn-outline" style={{padding:'6px 12px', fontSize:'0.8rem'}} onClick={() => setShowCreateTripModal(true)}><SvgIcon name="lazer" size={14}/> Criar</button>
             </div>
             {trips.length === 0 ? (
               <div style={{textAlign:'center', padding:'40px 20px', color:'var(--text-muted-dark)'}}>
@@ -2356,6 +2353,51 @@ const [notificationDays, setNotificationDays] = useState(1);
                   setShowNameModal(false);
                 }
               }}>Continuar</button>
+            </div>
+          </div>
+        )}
+
+        {showCreateTripModal && (
+          <div style={{position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.7)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:'20px'}} onClick={() => setShowCreateTripModal(false)}>
+            <div style={{background:'var(--bg-surface-dark)', borderRadius:'20px', padding:'24px', width:'100%', maxWidth:'340px', boxShadow:'0 10px 40px rgba(0,0,0,0.5)'}} onClick={e => e.stopPropagation()}>
+              <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px'}}>
+                <h3 style={{margin:0, color:'var(--text-main-dark)', fontSize:'1.1rem'}}><SvgIcon name="airplane" size={20}/> Nova Viagem</h3>
+                <button onClick={() => setShowCreateTripModal(false)} style={{background:'none', border:'none', color:'var(--text-muted-dark)', cursor:'pointer', fontSize:'1.2rem', padding:0}}>×</button>
+              </div>
+              <input 
+                type="text" 
+                className="modern-input" 
+                placeholder="Nome da viagem/evento" 
+                value={newTripName}
+                onChange={e => setNewTripName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && newTripName.trim() && (() => {
+                  const newTrip = { id: `trip_${Date.now()}`, name: newTripName.trim(), color: '#FFB142', budget: 0 };
+                  const updated = [...trips, newTrip];
+                  setTrips(updated);
+                  localStorage.setItem('financeTripsV2', JSON.stringify(updated));
+                  showToast('Viagem criada!', 'success');
+                  setNewTripName('');
+                  setShowCreateTripModal(false);
+                })()}
+                autoFocus
+                style={{marginBottom:'16px'}}
+              />
+              <button 
+                className="btn-submit" 
+                style={{width:'100%', background: newTripName.trim() ? 'var(--color-primary)' : 'var(--text-muted-dark)'}}
+                disabled={!newTripName.trim()}
+                onClick={() => {
+                  const newTrip = { id: `trip_${Date.now()}`, name: newTripName.trim(), color: '#FFB142', budget: 0 };
+                  const updated = [...trips, newTrip];
+                  setTrips(updated);
+                  localStorage.setItem('financeTripsV2', JSON.stringify(updated));
+                  showToast('Viagem criada!', 'success');
+                  setNewTripName('');
+                  setShowCreateTripModal(false);
+                }}
+              >
+                Criar Viagem
+              </button>
             </div>
           </div>
         )}
