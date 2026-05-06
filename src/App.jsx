@@ -130,6 +130,7 @@ const globalStyle = `
       justify-content: center;
       position: relative;
       min-height: 40px;
+      gap: 16px;
     }
     .month-picker-wrapper {
       display: flex;
