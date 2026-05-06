@@ -132,6 +132,14 @@ const globalStyle = `
       position: relative;
       min-height: 40px;
       gap: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .header-actions {
+      display: flex;
+      gap: 16px;
+      align-items: center;
     }
     .month-picker-wrapper {
       display: flex;
@@ -143,20 +151,10 @@ const globalStyle = `
       min-width: 160px;
       text-align: center;
     }
-    .config-btn {
-      position: absolute;
-      right: 0;
-      top: 50%;
-      transform: translateY(-50%);
-      cursor: pointer;
-      color: var(--text-muted-dark);
-    }
-    .greeting {
-      justify-content: center;
-    }
   }
 
-  .config-btn { cursor: pointer; color: var(--text-muted-dark); }
+  .config-btn { cursor: pointer; color: var(--text-muted-dark); transition: color 0.2s; }
+  .config-btn:hover { color: var(--color-primary); }
   .config-icon-fixed { position: absolute; top: 12px; right: 12px; cursor: pointer; color: var(--text-muted-dark); z-index: 10; }
   .month-picker-wrapper { display: flex; align-items: center; }
 
@@ -306,6 +304,16 @@ const globalStyle = `
   .name-modal p { font-size: 0.9rem; color: var(--text-muted-dark); margin-bottom: 24px; }
   .name-modal input { width: 100%; background: var(--bg-page-dark); border: 1px solid var(--border-dark); padding: 14px 16px; border-radius: 14px; color: var(--text-main-dark); font-size: 1rem; margin-bottom: 16px; text-align: center; }
   .name-modal button { width: 100%; background: var(--color-primary); color: white; padding: 14px; border: none; border-radius: 14px; font-weight: 600; font-size: 1rem; cursor: pointer; }
+
+  /* Confirm Modal */
+  .confirm-modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 200; display: flex; justify-content: center; align-items: center; }
+  .confirm-modal { background: var(--bg-surface-dark); padding: 32px; border-radius: 24px; width: 90%; max-width: 360px; text-align: center; animation: popIn 0.4s ease; }
+  .confirm-modal h2 { font-size: 1.3rem; margin-bottom: 10px; color: var(--text-main-dark); }
+  .confirm-modal p { font-size: 0.9rem; color: var(--text-muted-dark); margin-bottom: 24px; line-height: 1.5; }
+  .confirm-modal-btns { display: flex; gap: 12px; }
+  .confirm-modal-btns button { flex: 1; padding: 14px; border: none; border-radius: 14px; font-weight: 600; font-size: 1rem; cursor: pointer; }
+  .confirm-modal-cancel { background: var(--bg-page-dark); color: var(--text-muted-dark); }
+  .confirm-modal-ok { background: var(--color-expense); color: white; }
 `;
 
 // --- COMPONENTES VISUAIS ---
@@ -565,20 +573,32 @@ const BottomSheet = ({ onClose, onSave, initialData, accounts, expenseCats, inco
             )}
 
             {!isEdit && type === 'saida' && (
-              <div style={{marginBottom:'16px', background:'var(--bg-surface-dark)', padding:'12px', borderRadius:'14px'}}>
-                <label style={{fontSize:'0.85rem', color:'var(--text-muted-dark)'}}><SvgIcon name="users" size={16}/> Cobrar de Terceiros</label>
-                <div style={{display:'flex', alignItems:'center', gap:'8px', marginTop:'8px'}}>
-                  <span style={{fontSize:'1rem', fontWeight:500, color:'var(--text-muted-dark)'}}>R$</span>
-                  <input type="text" inputMode="decimal" className="modern-input" placeholder="0,00" style={{margin:0, flex:1}} value={splitAmountStr} onChange={e=>setSplitAmountStr(handleMask(e.target.value))} />
-                </div>
-                {parseFloat(splitAmountStr.replace(',','.')) > 0 && amountStr && (
-                  <div style={{marginTop:'12px', fontSize:'0.9rem', color:'var(--color-primary)'}}>
-                    <button className="btn-outline" style={{width:'100%', fontSize:'0.8rem', padding:'8px'}} onClick={() => {
-                       const val = parseFloat(splitAmountStr.replace(',','.')).toFixed(2);
-                       navigator.clipboard.writeText(`A despesa "${desc || 'Gasto'}" teve uma parte sua de R$ ${val.replace('.',',')}. Me faz o Pix!`);
-                       triggerError('Mensagem copiada!');
-                    }}>Copiar Cobrança</button>
+              <div style={{marginBottom:'16px', background:'var(--bg-surface-dark)', padding:'16px', borderRadius:'18px', border:'1px solid var(--border-dark)'}}>
+                <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'12px'}}>
+                  <label style={{fontSize:'0.85rem', color:'var(--text-muted-dark)', display:'flex', alignItems:'center', gap:'6px'}}>
+                    <SvgIcon name="users" size={16}/> Cobrar de Alguém
+                  </label>
+                  <div style={{display:'flex', gap:'6px'}}>
+                    <button className="chip" style={{padding:'4px 8px', fontSize:'0.7rem'}} onClick={() => {
+                      const total = parseFloat(amountStr.replace(',','.')) || 0;
+                      setSplitAmountStr((total / 2).toFixed(2).replace('.',','));
+                    }}>1/2</button>
+                    <button className="chip" style={{padding:'4px 8px', fontSize:'0.7rem'}} onClick={() => {
+                      const total = parseFloat(amountStr.replace(',','.')) || 0;
+                      setSplitAmountStr((total / 3).toFixed(2).replace('.',','));
+                    }}>1/3</button>
                   </div>
+                </div>
+                <div style={{display:'flex', alignItems:'center', gap:'10px', background:'rgba(255,255,255,0.03)', padding:'10px', borderRadius:'12px'}}>
+                  <span style={{fontSize:'1rem', fontWeight:600, color:'var(--color-primary)'}}>R$</span>
+                  <input type="text" inputMode="decimal" className="smart-input" placeholder="0,00" style={{fontSize:'1.1rem', fontWeight:600}} value={splitAmountStr} onChange={e=>setSplitAmountStr(handleMask(e.target.value))} />
+                </div>
+                {parseFloat(splitAmountStr.replace(',','.')) > 0 && (
+                  <button className="btn-submit" style={{marginTop:'12px', padding:'10px', fontSize:'0.85rem', background:'var(--bg-surface-hover)', boxShadow:'none'}} onClick={() => {
+                     const val = parseFloat(splitAmountStr.replace(',','.')).toFixed(2);
+                     navigator.clipboard.writeText(`Ei! A parte da despesa "${desc || 'Gasto'}" ficou R$ ${val.replace('.',',')}. Consegue me enviar o Pix? 😊`);
+                     triggerError('Link de cobrança copiado!');
+                  }}>Copiar Mensagem de Pix</button>
                 )}
               </div>
             )}
@@ -657,6 +677,7 @@ const [notificationDays, setNotificationDays] = useState(1);
   const [editTx, setEditTx] = useState(null);
   const [selectedAccountFilter, setSelectedAccountFilter] = useState(null);
   const [toastMsg, setToastMsg] = useState(null);
+  const [confirmModal, setConfirmModal] = useState(null);
   const [addingShortcut, setAddingShortcut] = useState(false);
   const [shortcutTitle, setShortcutTitle] = useState('');
   const [shortcutAmount, setShortcutAmount] = useState('');
@@ -1339,12 +1360,14 @@ const [notificationDays, setNotificationDays] = useState(1);
                 </select>
               </div>
             )}
-            <div className="config-btn" onClick={()=>setActiveTab('trips')} style={{ color: activeTab === 'trips' ? 'var(--color-primary)' : 'var(--text-muted-dark)' }}>
-               <SvgIcon name="airplane" size={24} />
+            <div className="header-actions">
+              <div className="config-btn" title="Viagens" onClick={()=>setActiveTab('trips')} style={{ color: activeTab === 'trips' ? 'var(--color-primary)' : 'var(--text-muted-dark)' }}>
+                 <SvgIcon name="airplane" size={24} />
+              </div>
+              <div className="config-btn" title="Configurações" onClick={()=>setActiveTab('config')} style={{ color: activeTab === 'config' ? 'var(--color-primary)' : 'var(--text-muted-dark)' }}>
+                 <SvgIcon name="config" size={24} />
+              </div>
             </div>
-          </div>
-          <div className="config-icon-fixed" onClick={()=>setActiveTab('config')} style={{ color: activeTab === 'config' ? 'var(--color-primary)' : 'var(--text-muted-dark)' }}>
-             <SvgIcon name="config" size={24} />
           </div>
         </div>
 
@@ -1361,23 +1384,46 @@ const [notificationDays, setNotificationDays] = useState(1);
               </div>
             </div>
 
-            <div className="insight-card">
-               <div className="insight-row">
-                  <div className="insight-icon" style={{color:'var(--color-primary)'}}><SvgIcon name="chart" size={20}/></div>
+            <div className="insight-card" style={{padding:'20px'}}>
+               <div className="insight-row" style={{marginBottom:'12px'}}>
+                  <div className="insight-icon" style={{color:'var(--color-income)', background:'rgba(16, 185, 129, 0.1)'}}><SvgIcon name="wallet" size={20}/></div>
                   <div style={{flex:1}}>
-                     <div className="insight-title">Sobra disponível no mês</div>
-                     <div className="insight-val" style={{color: (monthInc - monthExp) >= 0 ? 'var(--color-income)' : 'var(--color-expense)'}}>
-                        {safeFormat(monthInc - monthExp)}
+                     <div className="insight-title">Economia do Mês</div>
+                     <div className="insight-val" style={{color: 'var(--color-income)', fontSize:'1.4rem'}}>
+                        {safeFormat(Math.max(0, monthInc - monthExp))}
                      </div>
                   </div>
-                  {selectedMonth === getCurrentMonthStr() && (
-                    <div style={{textAlign:'right'}}>
-                       <div className="insight-title">Orçamento Diário</div>
-                       <div className="insight-val" style={{fontSize:'0.9rem'}}>
-                          {safeFormat(Math.max((monthInc - monthExp) / (31 - new Date().getDate() + 1), 0))}
-                       </div>
+                  <div style={{textAlign:'right'}}>
+                     <div className="insight-title">Uso da Receita</div>
+                     <div className="insight-val" style={{fontSize:'0.9rem'}}>
+                        {monthInc > 0 ? ((monthExp / monthInc) * 100).toFixed(0) : 0}%
+                     </div>
+                  </div>
+               </div>
+               
+               <div className="budget-bar-bg" style={{height:'10px', marginBottom:'16px'}}>
+                 <div className="budget-bar-fill" style={{
+                   width: `${Math.min(100, monthInc > 0 ? (monthExp / monthInc) * 100 : 0)}%`, 
+                   background: (monthExp / monthInc) > 0.8 ? 'var(--color-expense)' : 'var(--color-income)'
+                 }}></div>
+               </div>
+
+               <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                 <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                    <div className="insight-icon" style={{width:'32px', height:'32px', color:'var(--color-primary)'}}><SvgIcon name="chart" size={16}/></div>
+                    <div>
+                      <div className="insight-title" style={{fontSize:'0.65rem'}}>Orçamento Diário</div>
+                      <div className="insight-val" style={{fontSize:'0.85rem'}}>
+                        {selectedMonth === getCurrentMonthStr() ? safeFormat(Math.max((monthInc - monthExp) / (31 - new Date().getDate() + 1), 0)) : '--'}
+                      </div>
                     </div>
-                  )}
+                 </div>
+                 <div style={{textAlign:'right'}}>
+                   <div className="insight-title" style={{fontSize:'0.65rem'}}>Fim do Mês em</div>
+                   <div className="insight-val" style={{fontSize:'0.85rem'}}>
+                     {selectedMonth === getCurrentMonthStr() ? `${31 - new Date().getDate() + 1} dias` : '--'}
+                   </div>
+                 </div>
                </div>
             </div>
 
@@ -1472,150 +1518,174 @@ const [notificationDays, setNotificationDays] = useState(1);
           <div className="tab-content content-pad" style={{paddingTop: '20px'}}>
               
               {/* Header Didático */}
-              <div style={{marginBottom: '20px'}}>
-                <h3 className="section-title" style={{marginBottom: '4px'}}>Análise de Saúde Financeira</h3>
-                <p style={{fontSize: '0.85rem', color: 'var(--text-muted-dark)'}}>Entenda o comportamento do seu dinheiro de forma simples.</p>
+              <div style={{marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                <div>
+                  <h3 className="section-title" style={{marginBottom: '4px'}}>Sua Inteligência Financeira</h3>
+                  <p style={{fontSize: '0.8rem', color: 'var(--text-muted-dark)'}}>Entenda o rastro do seu dinheiro.</p>
+                </div>
+                <div style={{
+                  background: 'var(--bg-surface-dark)', 
+                  padding: '8px 12px', 
+                  borderRadius: '12px', 
+                  border: '1px solid var(--border-dark)',
+                  textAlign: 'center'
+                }}>
+                  <div style={{fontSize: '0.6rem', color: 'var(--text-muted-dark)', textTransform: 'uppercase', letterSpacing: '1px'}}>Score do Mês</div>
+                  <div style={{fontSize: '1.2rem', fontWeight: 800, color: (monthExp / (monthInc || 1)) < 0.7 ? 'var(--color-income)' : 'var(--color-expense)'}}>
+                    {(monthExp / (monthInc || 1)) < 0.5 ? 'A+' : (monthExp / (monthInc || 1)) < 0.8 ? 'B' : 'C-'}
+                  </div>
+                </div>
               </div>
 
               {/* Insights Dinâmicos */}
               {financialInsights.length > 0 && (
-                <div style={{display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '16px', marginBottom: '8px'}}>
+                <div style={{display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '16px', marginBottom: '8px', scrollbarWidth: 'none'}}>
                   {financialInsights.map((ins, i) => (
                     <div key={i} className="glass-card" style={{
-                      minWidth: '260px', 
+                      minWidth: '280px', 
                       padding: '16px', 
                       display: 'flex', 
                       flexDirection: 'column', 
                       gap: '8px', 
-                      border: ins.type === 'warning' ? '1px solid rgba(239, 68, 68, 0.3)' : ins.type === 'success' ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid var(--border-dark)',
-                      background: ins.type === 'warning' ? 'rgba(239, 68, 68, 0.05)' : ins.type === 'success' ? 'rgba(16, 185, 129, 0.05)' : 'var(--bg-surface-dark)'
+                      border: ins.type === 'warning' ? '1px solid rgba(239, 68, 68, 0.2)' : ins.type === 'success' ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid var(--border-dark)',
+                      background: 'rgba(255,255,255,0.02)'
                     }}>
                       <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
                         <div style={{color: ins.type === 'warning' ? 'var(--color-expense)' : ins.type === 'success' ? 'var(--color-income)' : 'var(--color-primary)'}}>
-                          <SvgIcon name={ins.icon} size={18} />
+                          <SvgIcon name={ins.icon} size={20} />
                         </div>
-                        <span style={{fontSize: '0.9rem', fontWeight: 700, color: ins.type === 'warning' ? 'var(--color-expense)' : ins.type === 'success' ? 'var(--color-income)' : 'var(--text-main-dark)'}}>{ins.title}</span>
+                        <span style={{fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-main-dark)'}}>{ins.title}</span>
                       </div>
-                      <p style={{fontSize: '0.8rem', color: 'var(--text-main-dark)', margin: 0, lineHeight: 1.4}}>{ins.text}</p>
+                      <p style={{fontSize: '0.8rem', color: 'var(--text-muted-dark)', margin: 0, lineHeight: 1.5}}>{ins.text}</p>
                     </div>
                   ))}
                 </div>
               )}
 
-              {/* Comparativo de Mês Anterior vs Atual */}
-              {monthlyComparison && (
-                <div className="glass-card" style={{marginBottom:'16px'}}>
-                  <h3 className="section-title">Como você está hoje vs Mês Passado</h3>
-                  <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
-                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                      <div>
-                        <div style={{fontSize: '0.8rem', color: 'var(--text-muted-dark)'}}>Entradas</div>
-                        <div style={{fontSize: '1.2rem', fontWeight: 600}}>{safeFormat(monthInc)}</div>
-                      </div>
-                      <div style={{
-                        padding: '4px 8px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600,
-                        background: monthlyComparison.incomeChange >= 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                        color: monthlyComparison.incomeChange >= 0 ? 'var(--color-income)' : 'var(--color-expense)'
-                      }}>
-                        {monthlyComparison.incomeChange >= 0 ? '↑' : '↓'} {Math.abs(monthlyComparison.incomeChange).toFixed(1)}%
-                      </div>
-                      <div style={{textAlign: 'right'}}>
-                        <div style={{fontSize: '0.8rem', color: 'var(--text-muted-dark)'}}>Mês Anterior</div>
-                        <div style={{fontSize: '1rem', color: 'var(--text-muted-dark)'}}>{safeFormat(monthlyComparison.previous.income)}</div>
-                      </div>
-                    </div>
-
-                    <div style={{height: '1px', background: 'var(--border-dark)'}}></div>
-
-                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                      <div>
-                        <div style={{fontSize: '0.8rem', color: 'var(--text-muted-dark)'}}>Saídas</div>
-                        <div style={{fontSize: '1.2rem', fontWeight: 600}}>{safeFormat(monthExp)}</div>
-                      </div>
-                      <div style={{
-                        padding: '4px 8px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600,
-                        background: monthlyComparison.expenseChange <= 5 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                        color: monthlyComparison.expenseChange <= 5 ? 'var(--color-income)' : 'var(--color-expense)'
-                      }}>
-                        {monthlyComparison.expenseChange >= 0 ? '↑' : '↓'} {Math.abs(monthlyComparison.expenseChange).toFixed(1)}%
-                      </div>
-                      <div style={{textAlign: 'right'}}>
-                        <div style={{fontSize: '0.8rem', color: 'var(--text-muted-dark)'}}>Mês Anterior</div>
-                        <div style={{fontSize: '1rem', color: 'var(--text-muted-dark)'}}>{safeFormat(monthlyComparison.previous.expense)}</div>
-                      </div>
-                    </div>
-                  </div>
+              {/* Onde o Dinheiro Vai (Gráfico de Barras) */}
+              <div className="glass-card" style={{marginBottom: '16px', padding: '20px'}}>
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
+                  <h3 className="section-title" style={{margin: 0}}>Para onde vai o dinheiro?</h3>
+                  <div style={{fontSize: '0.75rem', color: 'var(--text-muted-dark)'}}>Top Categorias</div>
                 </div>
-              )}
+                
+                {donutData.length > 0 ? (
+                  <div style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
+                    {donutData.sort((a,b) => b.value - a.value).slice(0, 5).map((cat, i) => {
+                      const total = donutData.reduce((s,c) => s + c.value, 0);
+                      const pct = (cat.value / total) * 100;
+                      return (
+                        <div key={i} style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
+                          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                            <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                              <div style={{width: '24px', height: '24px', borderRadius: '6px', background: `${cat.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                                <div style={{width: '8px', height: '8px', borderRadius: '2px', background: cat.color}}></div>
+                              </div>
+                              <span style={{fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-main-dark)'}}>{cat.label}</span>
+                            </div>
+                            <div style={{textAlign: 'right'}}>
+                              <div style={{fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main-dark)'}}>{safeFormat(cat.value)}</div>
+                              <div style={{fontSize: '0.65rem', color: 'var(--text-muted-dark)'}}>{pct.toFixed(0)}% do total</div>
+                            </div>
+                          </div>
+                          <div style={{height: '6px', width: '100%', background: 'rgba(255,255,255,0.05)', borderRadius: '10px', overflow: 'hidden'}}>
+                            <div style={{height: '100%', width: `${pct}%`, background: cat.color, borderRadius: '10px'}}></div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div style={{textAlign: 'center', padding: '20px', color: 'var(--text-muted-dark)'}}>Nenhum dado este mês.</div>
+                )}
+              </div>
 
-              {/* Projeção do Mês (Somente se for o mês atual) */}
-              {monthProjection && selectedMonth === getCurrentMonthStr() && (
-                <div className="glass-card" style={{marginBottom:'16px', borderLeft: '4px solid var(--color-primary)'}}>
-                  <h3 className="section-title">Onde você vai chegar</h3>
-                  <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'12px'}}>
-                    <div>
-                      <div style={{fontSize:'0.8rem', color:'var(--text-muted-dark)'}}>Gasto Real</div>
-                      <div style={{fontSize:'1.4rem', fontWeight:700}}>{safeFormat(monthProjection.spent)}</div>
-                    </div>
-                    <div style={{textAlign:'right'}}>
-                      <div style={{fontSize:'0.8rem', color:'var(--text-muted-dark)'}}>Previsão de Final</div>
-                      <div style={{fontSize:'1.4rem', fontWeight:700, color: monthProjection.projected > monthInc ? 'var(--color-expense)' : 'var(--color-income)'}}>{safeFormat(monthProjection.projected)}</div>
-                    </div>
-                  </div>
-                  <div className="budget-bar-bg">
-                    <div className="budget-bar-fill" style={{width: `${Math.min(monthProjection.progress, 100)}%`, background: 'var(--color-primary)'}}></div>
-                  </div>
-                  <div style={{fontSize:'0.75rem', color:'var(--text-muted-dark)', marginTop:'8px', textAlign:'center'}}>
-                    {monthProjection.progress < 50 ? 'O mês está apenas começando! Mantenha o foco.' : monthProjection.progress > 90 ? 'Mês quase no fim. Como estão as metas?' : 'Você já percorreu ' + monthProjection.progress.toFixed(0) + '% do mês.'}
-                  </div>
+              {/* Tendência Diária de Gastos */}
+              <div className="glass-card" style={{marginBottom: '16px', padding: '20px'}}>
+                <h3 className="section-title">Ritmo de Gastos</h3>
+                <p style={{fontSize: '0.75rem', color: 'var(--text-muted-dark)', marginBottom: '20px'}}>Como você gastou ao longo dos dias do mês.</p>
+                
+                <div style={{
+                  display: 'flex', 
+                  alignItems: 'flex-end', 
+                  justifyContent: 'space-between', 
+                  height: '120px', 
+                  gap: '4px',
+                  paddingBottom: '10px',
+                  borderBottom: '1px solid var(--border-dark)'
+                }}>
+                  {Array.from({length: 31}, (_, i) => {
+                    const day = (i + 1).toString().padStart(2, '0');
+                    const dayTxs = monthData.filter(t => t.date.endsWith(`-${day}`) && t.type === 'saida');
+                    const dailyTotal = dayTxs.reduce((s,t) => s + t.amount, 0);
+                    const maxDaily = Math.max(...Array.from({length: 31}, (_, d) => {
+                      const dd = (d + 1).toString().padStart(2, '0');
+                      return monthData.filter(t => t.date.endsWith(`-${dd}`) && t.type === 'saida').reduce((s,t) => s + t.amount, 0);
+                    }), 1);
+                    const height = (dailyTotal / maxDaily) * 100;
+                    const isToday = new Date().getDate() === (i + 1);
+
+                    return (
+                      <div key={i} style={{flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end'}}>
+                        <div style={{
+                          width: '100%', 
+                          height: `${Math.max(height, 2)}%`, 
+                          background: isToday ? 'var(--color-primary)' : 'rgba(255, 74, 107, 0.2)',
+                          borderRadius: '2px',
+                          opacity: dailyTotal > 0 ? 1 : 0.2
+                        }}></div>
+                      </div>
+                    );
+                  })}
                 </div>
-              )}
+                <div style={{display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '0.6rem', color: 'var(--text-muted-dark)'}}>
+                   <span>Dia 01</span>
+                   <span>Meio do Mês</span>
+                   <span>Dia 31</span>
+                </div>
+              </div>
 
-              {/* Evolução Patrimonial Gráfica */}
-              <div className="glass-card" style={{marginBottom:'16px'}}>
-                <h3 className="section-title">Acúmulo de Capital</h3>
-                <p style={{fontSize:'0.8rem', color:'var(--text-muted-dark)', marginBottom:'20px'}}>
-                  Este gráfico mostra o total de dinheiro que você possui em todas as contas somadas ao final de cada mês.
-                </p>
+              {/* Comparativo Didático */}
+              <div className="card-row" style={{marginBottom: '16px'}}>
+                <div className="glass-card" style={{flex: 1, padding: '16px'}}>
+                   <div style={{fontSize: '0.65rem', color: 'var(--text-muted-dark)', marginBottom: '4px'}}>Mês Anterior</div>
+                   <div style={{fontSize: '1rem', fontWeight: 600}}>{monthlyComparison ? safeFormat(monthlyComparison.previous.expense) : '--'}</div>
+                </div>
+                <div className="glass-card" style={{flex: 1, padding: '16px', borderLeft: '3px solid var(--color-primary)'}}>
+                   <div style={{fontSize: '0.65rem', color: 'var(--text-muted-dark)', marginBottom: '4px'}}>Diferença</div>
+                   <div style={{fontSize: '1rem', fontWeight: 800, color: monthlyComparison?.expenseChange > 0 ? 'var(--color-expense)' : 'var(--color-income)'}}>
+                      {monthlyComparison ? `${monthlyComparison.expenseChange > 0 ? '+' : ''}${monthlyComparison.expenseChange.toFixed(0)}%` : '--'}
+                   </div>
+                </div>
+              </div>
+
+              {/* Evolução Patrimonial */}
+              <div className="glass-card" style={{marginBottom:'20px'}}>
+                <h3 className="section-title" style={{marginBottom: '4px'}}>Acúmulo de Capital</h3>
+                <p style={{fontSize: '0.75rem', color: 'var(--text-muted-dark)', marginBottom: '16px'}}>Acompanhe seu progresso ao longo do tempo.</p>
                 
                 {patrimonyEvolution.length > 1 ? (
                   <div style={{display:'flex', flexDirection:'column', gap:'12px'}}>
-                    {patrimonyEvolution.slice().reverse().slice(0, 6).map((p, i) => {
+                    {patrimonyEvolution.slice().reverse().slice(0, 4).map((p, i) => {
                       const maxAbs = Math.max(...patrimonyEvolution.map(x=>Math.abs(x.balance)), 1);
                       const pct = Math.abs((p.balance / maxAbs) * 100);
                       const isCurrent = p.month === getCurrentMonthStr();
                       
                       return (
-                        <div key={p.month} style={{display:'flex', flexDirection:'column', gap:'4px', opacity: isCurrent ? 1 : 0.7}}>
-                          <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-end'}}>
-                            <span style={{fontSize:'0.8rem', fontWeight: 600, color: isCurrent ? 'var(--color-primary)' : 'var(--text-main-dark)'}}>
-                              {getMonthLabel(p.month).split(' ')[0]} {isCurrent ? '(Hoje)' : ''}
-                            </span>
-                            <span style={{fontSize:'0.85rem', fontWeight:700, color: p.balance >= 0 ? 'var(--color-income)' : 'var(--color-expense)'}}>
-                              {safeFormat(p.balance)}
-                            </span>
-                          </div>
-                          <div className="budget-bar-bg" style={{height: '11px', background: 'rgba(255,255,255,0.05)'}}>
-                            <div className="budget-bar-fill" style={{
-                              width: `${pct}%`,
-                              background: p.balance >= 0 
-                                ? (isCurrent ? 'var(--color-primary)' : 'var(--color-income)') 
-                                : 'var(--color-expense)',
-                              borderRadius:'6px',
-                              boxShadow: isCurrent ? '0 0 10px rgba(59, 130, 246, 0.3)' : 'none'
-                            }}></div>
-                          </div>
+                        <div key={p.month} style={{display:'flex', alignItems:'center', gap: '12px'}}>
+                           <div style={{fontSize: '0.7rem', color: 'var(--text-muted-dark)', width: '30px'}}>{getMonthLabel(p.month).split(' ')[0]}</div>
+                           <div style={{flex: 1, height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '10px', overflow: 'hidden'}}>
+                             <div style={{
+                               height: '100%', 
+                               width: `${pct}%`, 
+                               background: p.balance >= 0 ? 'var(--color-income)' : 'var(--color-expense)',
+                               opacity: isCurrent ? 1 : 0.6
+                             }}></div>
+                           </div>
+                           <div style={{fontSize: '0.8rem', fontWeight: 700, width: '80px', textAlign: 'right'}}>{safeFormat(p.balance)}</div>
                         </div>
                       );
                     })}
-                  </div>
-                ) : patrimonyEvolution.length === 1 ? (
-                  <div style={{padding: '24px', textAlign: 'center', background: 'rgba(59,130,246,0.05)', borderRadius: '20px', border: '1px solid var(--border-dark)'}}>
-                    <div style={{color: 'var(--color-primary)', marginBottom: '12px'}}><SvgIcon name="investimento" size={40} /></div>
-                    <h4 style={{fontSize: '1rem', color: 'var(--text-main-dark)', marginBottom: '8px'}}>Sua jornada começou!</h4>
-                    <p style={{fontSize: '0.8rem', color: 'var(--text-muted-dark)', margin: 0, lineHeight: 1.5}}>
-                      Você já tem **{safeFormat(patrimonyEvolution[0].balance)}** acumulados este mês. Continue registrando para ver seu gráfico de crescimento nos próximos meses!
-                    </p>
                   </div>
                 ) : (
                   <div style={{textAlign:'center', color:'var(--text-muted-dark)', padding:'20px'}}>
@@ -2026,11 +2096,17 @@ const [notificationDays, setNotificationDays] = useState(1);
                   />
                   {expenseCategories.length > 1 && (
                     <button style={{background:'transparent', border:'none', color:'var(--color-expense)', cursor:'pointer'}} onClick={() => {
-                      if(confirm(`Excluir categoria "${c.label}"? Isso não apaga os lançamentos já feitos.`)) {
-                        const newCats = expenseCategories.filter(cat => cat.id !== c.id);
-                        setExpenseCategories(newCats);
-                        localStorage.setItem('financeExpenseCategories', JSON.stringify(newCats));
-                      }
+                      setConfirmModal({
+                        title: `Excluir categoria "${c.label}"?`,
+                        message: 'Isso não apaga os lançamentos já feitos.',
+                        onConfirm: () => {
+                          const newCats = expenseCategories.filter(cat => cat.id !== c.id);
+                          setExpenseCategories(newCats);
+                          localStorage.setItem('financeExpenseCategories', JSON.stringify(newCats));
+                          setConfirmModal(null);
+                        },
+                        onCancel: () => setConfirmModal(null)
+                      });
                     }}><SvgIcon name="trash" size={16}/></button>
                   )}
                 </div>
@@ -2064,11 +2140,17 @@ const [notificationDays, setNotificationDays] = useState(1);
                   </div>
                   {incomeCategories.length > 1 && (
                     <button style={{background:'transparent', border:'none', color:'var(--color-expense)', cursor:'pointer'}} onClick={() => {
-                      if(confirm(`Excluir categoria "${c.label}"?`)) {
-                        const newCats = incomeCategories.filter(cat => cat.id !== c.id);
-                        setIncomeCategories(newCats);
-                        localStorage.setItem('financeIncomeCategories', JSON.stringify(newCats));
-                      }
+                      setConfirmModal({
+                        title: `Excluir categoria "${c.label}"?`,
+                        message: 'Isso não apaga os lançamentos já feitos.',
+                        onConfirm: () => {
+                          const newCats = incomeCategories.filter(cat => cat.id !== c.id);
+                          setIncomeCategories(newCats);
+                          localStorage.setItem('financeIncomeCategories', JSON.stringify(newCats));
+                          setConfirmModal(null);
+                        },
+                        onCancel: () => setConfirmModal(null)
+                      });
                     }}><SvgIcon name="trash" size={16}/></button>
                   )}
                 </div>
@@ -2327,7 +2409,7 @@ const [notificationDays, setNotificationDays] = useState(1);
           </div>
         )}
 
-        {/* NAME MODAL */}
+{/* NAME MODAL */}
         {showNameModal && (
           <div className="name-modal-overlay">
             <div className="name-modal">
@@ -2349,10 +2431,24 @@ const [notificationDays, setNotificationDays] = useState(1);
                 const input = e.target.previousSibling;
                 if (input.value.trim()) {
                   setUserName(input.value.trim());
-                  localStorage.setItem('financeUserName', input.value.trim());
+                  localStorage.setItem('financeUserName', e.target.value.trim());
                   setShowNameModal(false);
                 }
               }}>Continuar</button>
+            </div>
+          </div>
+        )}
+
+        {/* CONFIRM MODAL */}
+        {confirmModal && (
+          <div className="confirm-modal-overlay" onClick={() => confirmModal.onCancel()}>
+            <div className="confirm-modal" onClick={e => e.stopPropagation()}>
+              <h2>{confirmModal.title}</h2>
+              <p>{confirmModal.message}</p>
+              <div className="confirm-modal-btns">
+                <button className="confirm-modal-cancel" onClick={() => confirmModal.onCancel()}>Cancelar</button>
+                <button className="confirm-modal-ok" onClick={() => confirmModal.onConfirm()}>Excluir</button>
+              </div>
             </div>
           </div>
         )}
