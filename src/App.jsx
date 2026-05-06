@@ -109,7 +109,7 @@ const globalStyle = `
   ::-webkit-scrollbar { display: none; }
 
   /* Header */
-  .header-area { padding: 16px 12px 10px; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .header-area { padding: 16px 12px 10px; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; position: relative; }
   
   @media (max-width: 480px) {
     .header-area {
@@ -117,6 +117,7 @@ const globalStyle = `
       align-items: center;
       gap: 16px;
       padding: 24px 16px 16px;
+      padding-right: 40px;
     }
     .header-left {
       flex-direction: column;
@@ -156,6 +157,7 @@ const globalStyle = `
   }
 
   .config-btn { cursor: pointer; color: var(--text-muted-dark); }
+  .config-icon-fixed { position: absolute; top: 12px; right: 12px; cursor: pointer; color: var(--text-muted-dark); z-index: 10; }
   .month-picker-wrapper { display: flex; align-items: center; }
 
   .header-left { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1; }
@@ -1338,9 +1340,9 @@ const [notificationDays, setNotificationDays] = useState(1);
             <div className="config-btn" onClick={()=>setActiveTab('trips')} style={{ color: activeTab === 'trips' ? 'var(--color-primary)' : 'var(--text-muted-dark)' }}>
                <SvgIcon name="airplane" size={24} />
             </div>
-            <div className="config-btn" onClick={()=>setActiveTab('config')} style={{ color: activeTab === 'config' ? 'var(--color-primary)' : 'var(--text-muted-dark)' }}>
-               <SvgIcon name="config" size={24} />
-            </div>
+          </div>
+          <div className="config-icon-fixed" onClick={()=>setActiveTab('config')} style={{ color: activeTab === 'config' ? 'var(--color-primary)' : 'var(--text-muted-dark)' }}>
+             <SvgIcon name="config" size={24} />
           </div>
         </div>
 
